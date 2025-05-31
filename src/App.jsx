@@ -1,22 +1,29 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import KitchenPanel from './Kitchenpanel';
-import Login from './pages/SingIn';    
-import Logout from './pages/logout';  
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Menyu from './Kitchenpanel';
+import Logout from './pages/logout';
+import SignIn from './pages/SingIn';
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const role = localStorage.getItem('userRole');
+    setIsLoggedIn(role === 'KITCHEN');
+  }, []);
+
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        <Route path="/kitchen" element={<KitchenPanel />} />
-        
-        <Route path="/login" element={<Login />} />
-        
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/login" element={<SignIn />} />
         <Route path="/logout" element={<Logout />} />
-        
-        <Route path="*" element={<Navigate to="/kitchen" replace />} />
+        <Route
+          path="/kitchen"
+          element={<Menyu />}
+        />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 

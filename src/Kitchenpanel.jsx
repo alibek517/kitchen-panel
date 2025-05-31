@@ -8,14 +8,6 @@ function KitchenPanel() {
   const [orders, setOrders] = useState([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    const role = localStorage.getItem('userRole');
-
-    if (!token || role !== 'KITCHEN') {
-      navigate('/login');
-    }
-  }, [navigate]);
 
   const fetchOrders = async () => {
     try {

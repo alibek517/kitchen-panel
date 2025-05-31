@@ -11,7 +11,6 @@ function Logout() {
   };
 
   const confirmLogout = () => {
-    localStorage.removeItem('authToken');
     localStorage.removeItem('userRole');
     localStorage.removeItem('user');
     navigate('/login');
