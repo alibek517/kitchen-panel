@@ -45,7 +45,7 @@ const SignIn = () => {
 
   return (
     <div className="signin-container">
-      <h1 className="kirish">Ofitsiant sifatida tizimga kirish</h1>
+      <h1 className="kirish">Oshpaz sifatida tizimga kirish</h1>
       <form onSubmit={handleSignIn}>
         <label htmlFor="username">Username</label>
         <input
