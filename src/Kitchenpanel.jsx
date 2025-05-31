@@ -1,136 +1,112 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import './KitchenPanel.css';
 import exit from '/exit.png';
 
 function KitchenPanel() {
   const [orders, setOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState('PENDING');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    const role = localStorage.getItem('userRole');
+
+    if (!token || role !== 'KITCHEN') {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const fetchOrders = async () => {
     try {
       const res = await axios.get('https://suddocs.uz/order');
       setOrders(res.data);
-    } catch (err) {
-      console.error('Xatolik:', err);
-    }
-  };
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem('authToken');
-    const role = localStorage.getItem('userRole');
-
-    if (!storedToken || role !== 'KITCHEN') {
-      navigate('/login');
-    }
-  }, [navigate]);
-
-  const changeStatus = async (id, newStatus) => {
-    try {
-      const res = await axios.put(`https://suddocs.uz/order/${id}`, {
-        status: newStatus,
-      });
-      const updatedOrder = res.data;
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.id === id ? { ...order, status: updatedOrder.status } : order
-        )
-      );
-    } catch (err) {
-      console.error('Status o‘zgartirishda xatolik:', err);
+    } catch (error) {
+      console.error('Buyurtmalarni olishda xatolik:', error);
     }
   };
 
   useEffect(() => {
     fetchOrders();
-
-    const interval = setInterval(() => {
-      fetchOrders();
-    }, 10000);
-
+    const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('user');
-    navigate('/login');
+  const updateOrderItemStatus = async (itemId, status) => {
+    try {
+      await axios.patch(`https://suddocs.uz/order/item/${itemId}/status`, { status });
+      fetchOrders();
+    } catch (error) {
+      console.error('Status yangilashda xatolik:', error);
+    }
   };
 
-  const filteredOrders = orders.filter((order) => order.status === activeTab);
+  const visibleOrders = orders.filter(order => {
+    if (['COMPLETED', 'ARCHIVE', 'READY'].includes(order.status)) return false;
+  
+    if (order.status === 'PENDING') {
+      const hasProgress = order.orderItems.some(item =>
+        ['COOKING', 'READY', 'COMPLETED'].includes(item.status)
+      );
+      if (hasProgress) return false;
+    }
+  
+    return true;
+  });
+  
 
   return (
     <div className="kitchen-panel">
       <img
-  onClick={logout}
-  className="exit-icon"
-  src={exit}
-  alt="exit"
-/>
+        src={exit}
+        alt="exit"
+        className="exit-icon"
+        onClick={() => navigate('/logout')}
+        style={{ cursor: 'pointer' }}
+      />
       <h2>🍽 Oshxona Paneli</h2>
 
-      <div className="filter-tabs">
-        <button
-          onClick={() => setActiveTab('PENDING')}
-          className={activeTab === 'PENDING' ? 'active' : ''}
-        >
-          Yangi
-        </button>
-        <button
-          onClick={() => setActiveTab('COOKING')}
-          className={activeTab === 'COOKING' ? 'active' : ''}
-        >
-          Tayyorlanayotganlar
-        </button>
-        <button
-          onClick={() => setActiveTab('READY')}
-          className={activeTab === 'READY' ? 'active' : ''}
-        >
-          Tayyor
-        </button>
+      <div className="order-list">
+        {visibleOrders.length === 0 ? (
+          <div className="no-orders">🚫 Buyurtma yo‘q</div>
+        ) : (
+          visibleOrders.map(order => {
+            const visibleItems = order.orderItems.filter(item => item.status !== 'COMPLETED');
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <div className="order-card" key={order.id}>
+                <p><strong>🪑 Stol:</strong> {order.tableId}</p>
+                <p><strong>🕒 Vaqt:</strong> {new Date(order.createdAt).toLocaleTimeString()}</p>
+                <ul>
+                  {visibleItems.map((item, i) => (
+                    <li key={i}>
+                      {item.product.name} - {item.count} ta
+                      {item.status === 'PENDING' && (
+                        <button
+                          className="start-btn"
+                          onClick={() => updateOrderItemStatus(item.id, 'COOKING')}
+                        >
+                          ▶ Pishirish
+                        </button>
+                      )}
+                      {item.status === 'COOKING' && (
+                        <button
+                          className="done-btn"
+                          onClick={() => updateOrderItemStatus(item.id, 'READY')}
+                        >
+                          ✅ Tayyor
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <p><strong>Status:</strong> {order.status}</p>
+              </div>
+            );
+          })
+        )}
       </div>
-
-      {filteredOrders.length === 0 ? (
-        <div className="no-orders">🚫 Buyurtmalar yo‘q</div>
-      ) : (
-        <div className="order-list">
-          {filteredOrders.map((order) => (
-            <div key={order.id} className="order-card">
-              <p><strong>🪑 Stol:</strong> {order.tableNumber}</p>
-              <p><strong>🕒 Vaqt:</strong> {new Date(order.createdAt).toLocaleTimeString()}</p>
-              <p><strong>🍲 Ovqatlar:</strong></p>
-              <ul>
-                {order.orderItems.map((item, index) => (
-                  <li key={index}>
-                    {item.product.name} - {item.count} ta
-                  </li>
-                ))}
-              </ul>
-
-              {order.status === 'PENDING' && (
-                <button
-                  className="start-btn"
-                  onClick={() => changeStatus(order.id, 'COOKING')}
-                >
-                  ▶️ Pishirishni boshlash
-                </button>
-              )}
-
-              {order.status === 'COOKING' && (
-                <button
-                  className="done-btn"
-                  onClick={() => changeStatus(order.id, 'READY')}
-                >
-                  ✅ Tayyor
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

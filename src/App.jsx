@@ -1,22 +1,22 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import KitchenPanel from './Kitchenpanel';
-import SignIn from './pages/SingIn';
+import Login from './pages/SingIn';    
+import Logout from './pages/logout';  
 
 function App() {
-  const role = localStorage.getItem('userRole'); // userRole deb olamiz
-
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="/login" element={<SignIn />} />
-        <Route
-          path="/menyu"
-          element={role === 'KITCHEN' ? <KitchenPanel /> : <Navigate to="/login" />}
-        />
+        <Route path="/kitchen" element={<KitchenPanel />} />
+        
+        <Route path="/login" element={<Login />} />
+        
+        <Route path="/logout" element={<Logout />} />
+        
+        <Route path="*" element={<Navigate to="/kitchen" replace />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 

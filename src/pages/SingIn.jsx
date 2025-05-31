@@ -2,19 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SingIn.css';
 
-function generateToken(length = 40) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=';
-  let token = '';
-  for (let i = 0; i < length; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
-}
-
 const SignIn = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // 👁️🙈 toggle holati
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSignIn = async (e) => {
@@ -35,12 +26,10 @@ const SignIn = () => {
       );
 
       if (foundUser) {
-        const token = generateToken();
-        localStorage.setItem('authToken', token);
         localStorage.setItem('userRole', foundUser.role);
         localStorage.setItem('user', JSON.stringify(foundUser));
 
-        navigate(`/menyu?token=${encodeURIComponent(token)}`);
+        navigate('/menyu');
       } else {
         alert('Foydalanuvchi topilmadi yoki parol noto‘g‘ri!');
       }
@@ -52,8 +41,9 @@ const SignIn = () => {
 
   return (
     <div className="signin-container">
-      <h1>Oshpaz sifatida tizimga kirish</h1>
+      <h1 className='kirish'>Oshpaz sifatida tizimga kirish</h1>
       <form onSubmit={handleSignIn}>
+        <label htmlFor="username">Username</label>
         <input
           type="text"
           placeholder="Username"
@@ -62,6 +52,7 @@ const SignIn = () => {
           required
         />
         
+        <label htmlFor="password">Parol</label>
         <div className="password-field">
           <input
             type={showPassword ? 'text' : 'password'}
@@ -80,7 +71,7 @@ const SignIn = () => {
           </span>
         </div>
 
-        <button type="submit">Sign In</button>
+        <button type="submit">Kirish</button>
       </form>
     </div>
   );
