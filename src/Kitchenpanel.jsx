@@ -18,7 +18,21 @@ function KitchenPanel() {
       setIsLoading(true);
       const res = await axios.get('https://suddocs.uz/order/kitchen');
       console.log('📦 Buyurtmalar yuklandi:', res.data);
-      setOrders(res.data);
+  
+      // Automatically update the status of "Ichimlik" items to "READY"
+      const updatedOrders = res.data.map((order) => ({
+        ...order,
+        orderItems: order.orderItems.map((item) => {
+          if (item.product?.category === 'Ichimlik' && item.status !== 'READY') {
+            // Emit a WebSocket event to update the status
+            socket.emit('update_order_item_status', { itemId: item.id, status: 'READY' });
+            return { ...item, status: 'READY' };
+          }
+          return item;
+        }),
+      }));
+  
+      setOrders(updatedOrders);
     } catch (error) {
       console.error('❌ Buyurtmalarni olishda xatolik:', error);
     } finally {
