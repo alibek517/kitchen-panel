@@ -12,6 +12,69 @@ function KitchenPanel() {
   const [updatingItems, setUpdatingItems] = useState(new Set());
   const navigate = useNavigate();
 
+  // Ichimlik kategoriyasini aniqlash
+  const isDrinkCategory = (product) => {
+    if (!product) return false;
+    
+    // categoryId 10 bo'lsa yoki category name 'Ichimlik' bo'lsa
+    return product.categoryId === 10 || 
+           product.category?.name === 'Ichimlik' || 
+           product.category?.id === 10;
+  };
+
+  // Ichimlik itemlarini darhol READY qilish
+  const autoUpdateDrinkItems = async (orders) => {
+    const drinkItems = [];
+    
+    orders.forEach(order => {
+      order.orderItems.forEach(item => {
+        if (isDrinkCategory(item.product) && 
+            item.status === 'PENDING') { // Faqat PENDING holatdagi ichimliklar
+          drinkItems.push(item);
+        }
+      });
+    });
+
+    console.log(`🥤 ${drinkItems.length} ta ichimlik avtomatik ishlov berilmoqda...`);
+
+    // Har bir ichimlik itemini ketma-ket READY qilish
+    for (const item of drinkItems) {
+      try {
+        console.log(`🥤 Ichimlik READY qilinmoqda: ${item.product.name} (ID: ${item.id})`);
+        
+        // WebSocket orqali yangilash
+        socket.emit('update_order_item_status', { 
+          itemId: item.id, 
+          status: 'READY' 
+        });
+        
+        // API orqali ham yangilash (backup)
+        try {
+          await axios.patch(`https://suddocs.uz/order/item/${item.id}/status`, { 
+            status: 'READY' 
+          });
+          console.log(`✅ Ichimlik API orqali yangilandi: ${item.product.name}`);
+        } catch (apiError) {
+          console.error('❌ API yangilashda xatolik:', apiError);
+        }
+        
+        // Har bir yangilash o'rtasida qisqa kutish
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+      } catch (error) {
+        console.error('❌ Ichimlik avtomatik yangilashda xatolik:', error);
+      }
+    }
+
+    if (drinkItems.length > 0) {
+      // Ichimliklar yangilangandan keyin orderlarni qayta yuklash
+      setTimeout(() => {
+        console.log('🔄 Ichimliklar yangilangandan keyin ma\'lumotlarni yangilash...');
+        fetchOrders();
+      }, 1000);
+    }
+  };
+
   // API orqali orderlarni olish
   const fetchOrders = async () => {
     try {
@@ -19,20 +82,13 @@ function KitchenPanel() {
       const res = await axios.get('https://suddocs.uz/order/kitchen');
       console.log('📦 Buyurtmalar yuklandi:', res.data);
   
-      // Automatically update the status of "Ichimlik" items to "READY"
-      const updatedOrders = res.data.map((order) => ({
-        ...order,
-        orderItems: order.orderItems.map((item) => {
-          if (item.product?.category === 'Ichimlik' && item.status !== 'READY') {
-            // Emit a WebSocket event to update the status
-            socket.emit('update_order_item_status', { itemId: item.id, status: 'READY' });
-            return { ...item, status: 'READY' };
-          }
-          return item;
-        }),
-      }));
-  
-      setOrders(updatedOrders);
+      setOrders(res.data);
+      
+      // Ichimliklarni darhol ishlov berish
+      setTimeout(() => {
+        autoUpdateDrinkItems(res.data);
+      }, 500);
+      
     } catch (error) {
       console.error('❌ Buyurtmalarni olishda xatolik:', error);
     } finally {
@@ -47,7 +103,7 @@ function KitchenPanel() {
     const handleConnect = () => {
       console.log('🟢 Kitchen Panel: WebSocket ulandi');
       setIsConnected(true);
-      fetchOrders(); // Refresh orders on reconnect
+      fetchOrders();
     };
 
     const handleDisconnect = () => {
@@ -55,29 +111,43 @@ function KitchenPanel() {
       setIsConnected(false);
     };
 
-    const handleOrderCreated = (newOrder) => {
+    const handleOrderCreated = async (newOrder) => {
       console.log('🆕 Yangi buyurtma keldi:', newOrder);
       setOrders((prevOrders) => {
         const exists = prevOrders.some((order) => order.id === newOrder.id);
         if (exists) return prevOrders;
-        return [...prevOrders, newOrder];
+        const updatedOrders = [...prevOrders, newOrder];
+        
+        // Yangi buyurtmadagi ichimliklarni darhol ishlov berish
+        setTimeout(() => {
+          console.log('🥤 Yangi buyurtmadagi ichimliklarni tekshirish...');
+          autoUpdateDrinkItems([newOrder]);
+        }, 200);
+        
+        return updatedOrders;
       });
     };
 
-    const handleOrderUpdated = (updatedOrder) => {
+    const handleOrderUpdated = async (updatedOrder) => {
       console.log('🔄 Buyurtma yangilandi:', updatedOrder);
-      // Agar to'liq ma'lumot kelmasa, API dan qayta yuklash
       if (!updatedOrder.orderItems || !updatedOrder.table) {
         console.log('⚠️ To\'liq ma\'lumot kelmadi, qayta yuklanmoqda...');
         fetchOrders();
         return;
       }
       
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
+      setOrders((prevOrders) => {
+        const newOrders = prevOrders.map((order) =>
           order.id === updatedOrder.id ? updatedOrder : order
-        )
-      );
+        );
+        
+        // Yangilangan buyurtmadagi ichimliklarni tekshirish
+        setTimeout(() => {
+          autoUpdateDrinkItems([updatedOrder]);
+        }, 200);
+        
+        return newOrders;
+      });
     };
 
     const handleOrderDeleted = ({ id }) => {
@@ -88,7 +158,6 @@ function KitchenPanel() {
     const handleOrderItemStatusUpdated = (updatedItem) => {
       console.log('📝 Item status yangilandi:', updatedItem);
       
-      // Agar product ma'lumoti yo'q bo'lsa, API dan qayta yuklash
       if (!updatedItem.product || !updatedItem.product.name) {
         console.log('⚠️ Product ma\'lumoti yo\'q, qayta yuklanmoqda...');
         fetchOrders();
@@ -126,8 +195,8 @@ function KitchenPanel() {
     socket.on('update_order_item_status_response', (response) => {
       if (response.status === 'ok') {
         console.log('✅ Item status muvaffaqiyatli yangilandi');
-        // Barcha holatlarda API dan qayta yuklash
-        setTimeout(() => fetchOrders(), 500);
+        // Ichimlik yangilanganidan keyin tezda refresh
+        setTimeout(() => fetchOrders(), 300);
       } else {
         console.error('❌ Item status yangilanmadi:', response.message);
         fetchOrders();
@@ -144,12 +213,11 @@ function KitchenPanel() {
       }
     });
 
-    // Agar allaqachon ulangan bo'lsa
     if (socket.connected) {
       setIsConnected(true);
     }
 
-    // Backup polling
+    // Backup polling - WebSocket ishlamasa
     const pollInterval = setInterval(() => {
       if (!socket.connected) {
         console.log('🔄 WebSocket uzilgan, polling ishlatilmoqda...');
@@ -157,11 +225,11 @@ function KitchenPanel() {
       }
     }, 30000);
 
-    // Har 5 daqiqada bir marta avtomatik yangilash
+    // Har 5 daqiqada avtomatik yangilash
     const refreshInterval = setInterval(() => {
       console.log('🔄 Avtomatik yangilash...');
       fetchOrders();
-    }, 300000); // 5 minut
+    }, 300000);
 
     // Cleanup
     return () => {
@@ -187,7 +255,6 @@ function KitchenPanel() {
       
       socket.emit('update_order_item_status', { itemId, status });
       
-      // 3 soniyadan keyin loading holatini to'xtatish
       setTimeout(() => {
         setUpdatingItems(prev => {
           const newSet = new Set(prev);
@@ -257,7 +324,11 @@ function KitchenPanel() {
   // Ko'rinadigan orderlarni filtrlash
   const visibleOrders = orders.filter((order) =>
     ['PENDING', 'COOKING'].includes(order.status) &&
-    order.orderItems.some((item) => ['PENDING', 'COOKING'].includes(item.status))
+    order.orderItems.some((item) => 
+      ['PENDING', 'COOKING'].includes(item.status) && 
+      item.product && 
+      !isDrinkCategory(item.product) // Ichimliklar ko'rsatilmaydi
+    )
   );
 
   return (
@@ -270,24 +341,24 @@ function KitchenPanel() {
           </h1>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <div>
-          <div className="user-info">
-            <span className="user-role">Oshpaz: </span>
-            <span className="user-name">{localStorage.getItem('user') || 'Noma\'lum'}</span>
+              <div className="user-info">
+                <span className="user-role">Oshpaz: </span>
+                <span className="user-name">{localStorage.getItem('user') || 'Noma\'lum'}</span>
+              </div>
+              <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
+                <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
+                <span className="status-text">
+                  {isConnected ? 'Real-time ulanish faol' : 'Offline rejim'}
+                </span>
+              </div>
+            </div>
+            <img
+              src={exit}
+              alt="exit"
+              className="exit-icon"
+              onClick={() => navigate('/logout')}
+            />
           </div>
-          <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-            <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
-            <span className="status-text">
-              {isConnected ? 'Real-time ulanish faol' : 'Offline rejim'}
-            </span>
-          </div>
-          </div>
-        <img
-          src={exit}
-          alt="exit"
-          className="exit-icon"
-          onClick={() => navigate('/logout')}
-        />
-        </div>
         </div>
       </header>
 
@@ -302,6 +373,9 @@ function KitchenPanel() {
             <div className="no-orders-icon">🍽️</div>
             <h3>Hozir faol buyurtma yo'q</h3>
             <p>Yangi buyurtmalar kelganda bu yerda ko'rinadi</p>
+            <small style={{color: '#666', marginTop: '10px', display: 'block'}}>
+              💡 Ichimliklar (categoryId: 10) avtomatik READY qilinadi
+            </small>
           </div>
         ) : (
           <div className="orders-grid">
@@ -325,7 +399,11 @@ function KitchenPanel() {
                 
                 <div className="order-items">
                   {order.orderItems
-                    .filter((item) => ['PENDING', 'COOKING'].includes(item.status))
+                    .filter((item) => 
+                      ['PENDING', 'COOKING'].includes(item.status) && 
+                      item.product && 
+                      !isDrinkCategory(item.product) // Ichimliklar ko'rsatilmaydi
+                    )
                     .map((item) => (
                       <div key={item.id} className="order-item">
                         <div className="item-details">
@@ -383,6 +461,22 @@ function KitchenPanel() {
                       </div>
                     ))}
                 </div>
+                
+                {/* Ichimliklar haqida ma'lumot */}
+                {order.orderItems.some(item => isDrinkCategory(item.product)) && (
+                  <div className="drinks-info">
+                    <small style={{color: '#28a745', fontStyle: 'italic'}}>
+                      🥤 Bu buyurtmadagi ichimliklar avtomatik READY qilindi
+                      <br />
+                      <span style={{fontSize: '0.8em', color: '#666'}}>
+                        Ichimliklar: {order.orderItems
+                          .filter(item => isDrinkCategory(item.product))
+                          .map(item => `${item.product.name} (×${item.count})`)
+                          .join(', ')}
+                      </span>
+                    </small>
+                  </div>
+                )}
               </div>
             ))}
           </div>
