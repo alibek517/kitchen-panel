@@ -4,20 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { socket } from './socket';
 import './KitchenPanel.css';
 import exit from '/exit.png';
-import { 
-  ChefHat, 
-  Clock, 
-  Table, 
-  Play, 
-  CheckCircle, 
-  Coffee, 
-  UtensilsCrossed,
-  Loader2,
-  AlertCircle,
-  Flame,
-  Timer,
-  Package
-} from 'lucide-react';
 
 function KitchenPanel() {
   const [orders, setOrders] = useState([]);
@@ -122,7 +108,7 @@ function KitchenPanel() {
     const handleOrderUpdated = (updatedOrder) => {
       console.log('🔄 Buyurtma yangilandi:', updatedOrder);
       if (!updatedOrder.orderItems || !updatedOrder.table) {
-        console.log(`⚠️ To'liq ma'lumot kelmadi, state yangilanmoqda...`);
+        console.log('⚠️ To‘liq ma‘lumot kelmadi, state yangilanmoqda...');
         return;
       }
 
@@ -137,14 +123,14 @@ function KitchenPanel() {
     };
 
     const handleOrderDeleted = ({ id }) => {
-      console.log(`🗑️ Buyurtma o'chirildi:`, id);
+      console.log('🗑️ Buyurtma o‘chirildi:', id);
       setOrders((prevOrders) => prevOrders.filter((order) => order.id !== id));
     };
 
     const handleOrderItemStatusUpdated = (updatedItem) => {
       console.log('📝 Item status yangilandi:', updatedItem);
       if (!updatedItem.product || !updatedItem.product.name) {
-        console.log(`⚠️ Product ma'lumoti yo'q`);
+        console.log('⚠️ Product ma‘lumoti yo‘q');
         return;
       }
 
@@ -164,7 +150,7 @@ function KitchenPanel() {
     };
 
     const handleOrderItemDeleted = ({ id }) => {
-      console.log(`🗑️ Item o'chirildi:`, id);
+      console.log('🗑️ Item o‘chirildi:', id);
       setOrders((prevOrders) =>
         prevOrders.map((order) => ({
           ...order,
@@ -205,7 +191,7 @@ function KitchenPanel() {
   // Order item statusini yangilash
   const updateOrderItemStatus = async (itemId, status) => {
     try {
-      console.log(`🔄 Item ${itemId} status ${status}ga o'zgartirilmoqda...`);
+      console.log(`🔄 Item ${itemId} status ${status}ga o‘zgartirilmoqda...`);
       setUpdatingItems((prev) => new Set(prev).add(itemId));
       socket.emit('update_order_item_status', { itemId, status });
     } catch (error) {
@@ -250,14 +236,14 @@ function KitchenPanel() {
       <header className="kitchen-header">
         <div className="header-content">
           <h1 className="kitchen-title">
-            <ChefHat className="kitchen-icon" size={32} />
+            <span className="kitchen-icon">👨‍🍳</span>
             Oshxona Paneli
           </h1>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <div>
               <div className="user-info">
                 <span className="user-role">Oshpaz: </span>
-                <span className="user-name">{localStorage.getItem('user') || 'Noma\'lum'}</span>
+                <span className="user-name">{localStorage.getItem('user') || 'Noma‘lum'}</span>
               </div>
               <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
                 <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
@@ -279,17 +265,16 @@ function KitchenPanel() {
       <div className="main-content">
         {isLoading ? (
           <div className="loading-container">
-            <Loader2 className="loading-spinner animate-spin" size={48} />
+            <div className="loading-spinner"></div>
             <p className="loading-text">Buyurtmalar yuklanmoqda...</p>
           </div>
         ) : visibleOrders.length === 0 ? (
           <div className="no-orders">
-            <UtensilsCrossed className="no-orders-icon" size={64} />
-            <h3>Hozir faol buyurtma yo'q</h3>
-            <p>Yangi buyurtmalar kelganda bu yerda ko'rinadi</p>
+            <div className="no-orders-icon">🍽️</div>
+            <h3>Hozir faol buyurtma yo‘q</h3>
+            <p>Yangi buyurtmalar kelganda bu yerda ko‘rinadi</p>
             <small style={{ color: '#666', marginTop: '10px', display: 'block' }}>
-              <AlertCircle size={16} style={{ display: 'inline', marginRight: '4px' }} />
-              Ichimliklar (categoryId: 10) avtomatik READY qilinadi
+              💡 Ichimliklar (categoryId: 10) avtomatik READY qilinadi
             </small>
           </div>
         ) : (
@@ -299,26 +284,16 @@ function KitchenPanel() {
                 <div className="order-header">
                   <div className="order-info">
                     <h3 className="table-number">
-                      <Table className="table-icon" size={20} />
+                      <span className="table-icon">🪑</span>
                       Stol {order.table?.number || 'N/A'}
                     </h3>
                     <p className="order-time">
-                      <Clock className="time-icon" size={16} />
+                      <span className="time-icon">🕒</span>
                       {formatTime(order.createdAt)}
                     </p>
                   </div>
                   <div className={`order-status status-${order.status?.toLowerCase()}`}>
-                    {order.status === 'PENDING' ? (
-                      <>
-                        <Timer size={16} style={{ marginRight: '4px' }} />
-                        Kutilmoqda
-                      </>
-                    ) : (
-                      <>
-                        <Flame size={16} style={{ marginRight: '4px' }} />
-                        Pishirilmoqda
-                      </>
-                    )}
+                    {order.status === 'PENDING' ? '⏳ Kutilmoqda' : '🔥 Pishirilmoqda'}
                   </div>
                 </div>
 
@@ -340,17 +315,7 @@ function KitchenPanel() {
                             <span className="item-count">×{item.count}</span>
                           </div>
                           <div className={`item-status status-${item.status?.toLowerCase()}`}>
-                            {item.status === 'PENDING' ? (
-                              <>
-                                <Timer size={14} style={{ marginRight: '4px' }} />
-                                Kutilmoqda
-                              </>
-                            ) : (
-                              <>
-                                <Flame size={14} style={{ marginRight: '4px' }} />
-                                Pishirilmoqda
-                              </>
-                            )}
+                            {item.status === 'PENDING' ? '⏳ Kutilmoqda' : '🔥 Pishirilmoqda'}
                           </div>
                         </div>
 
@@ -363,12 +328,12 @@ function KitchenPanel() {
                             >
                               {updatingItems.has(item.id) ? (
                                 <>
-                                  <Loader2 className="btn-spinner animate-spin" size={16} />
+                                  <span className="btn-spinner"></span>
                                   Boshlanyapti...
                                 </>
                               ) : (
                                 <>
-                                  <Play className="btn-icon" size={16} />
+                                  <span className="btn-icon">▶️</span>
                                   Pishirishni boshlash
                                 </>
                               )}
@@ -382,12 +347,12 @@ function KitchenPanel() {
                             >
                               {updatingItems.has(item.id) ? (
                                 <>
-                                  <Loader2 className="btn-spinner animate-spin" size={16} />
+                                  <span className="btn-spinner"></span>
                                   Tugallanmoqda...
                                 </>
                               ) : (
                                 <>
-                                  <CheckCircle className="btn-icon" size={16} />
+                                  <span className="btn-icon">✅</span>
                                   Tayyor deb belgilash
                                 </>
                               )}
@@ -401,8 +366,7 @@ function KitchenPanel() {
                 {order.orderItems.some((item) => isDrinkCategory(item.product)) && (
                   <div className="drinks-info">
                     <small style={{ color: '#28a745', fontStyle: 'italic' }}>
-                      <Coffee size={16} style={{ display: 'inline', marginRight: '4px' }} />
-                      Bu buyurtmadagi ichimliklar avtomatik READY qilindi
+                      🥤 Bu buyurtmadagi ichimliklar avtomatik READY qilindi
                       <br />
                       <span style={{ fontSize: '0.8em', color: '#666' }}>
                         Ichimliklar:{' '}
