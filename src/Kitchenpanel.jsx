@@ -274,7 +274,7 @@ function KitchenPanel() {
             <h3>Hozir faol buyurtma yo‘q</h3>
             <p>Yangi buyurtmalar kelganda bu yerda ko‘rinadi</p>
             <small style={{ color: '#666', marginTop: '10px', display: 'block' }}>
-              💡 Ichimliklar (categoryId: 10) avtomatik READY qilinadi
+              💡 Ichimliklar avtomatik Tayor qilinadi
             </small>
           </div>
         ) : (
