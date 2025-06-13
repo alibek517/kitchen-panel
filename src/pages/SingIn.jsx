@@ -24,7 +24,7 @@ const SignIn = () => {
       // Simulate API call delay for loading state
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      const res = await fetch('https://suddocs.uz/user');
+      const res = await fetch('https://alikafecrm.uz/user');
       if (!res.ok) throw new Error('Serverdan ma\'lumot olishda xatolik');
 
       const users = await res.json();

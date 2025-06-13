@@ -67,7 +67,7 @@ function KitchenPanel() {
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get('https://suddocs.uz/order/kitchen');
+      const res = await axios.get('https://alikafecrm.uz/order/kitchen');
       console.log('📦 Buyurtmalar yuklandi:', res.data);
       setOrders(res.data);
       setTimeout(() => autoUpdateDrinkItems(res.data), 500);
