@@ -1,28 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { socket } from './socket';
 import './KitchenPanel.css';
-import exit from '/exit.png';
 
 function KitchenPanel() {
   const [orders, setOrders] = useState([]);
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItems, setUpdatingItems] = useState(new Set());
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Ichimlik kategoriyasini aniqlash
+  // Ичимлик категориясини аниқлаш
   const isDrinkCategory = (product) => {
     if (!product) return false;
     return (
       product.categoryId === 10 ||
-      product.category?.name === 'Ichimlik' ||
+      product.category?.name === 'Ичимлик' ||
       product.category?.id === 10
     );
   };
 
-  // Ichimlik itemlarini avtomatik READY qilish
+  // Ҳозирги саҳифани аниқлаш
+  const getCurrentPage = () => {
+    const path = location.pathname;
+    if (path === '/kitchen') return 'home';
+    if (path === '/archive') return 'archive';
+    return 'home';
+  };
+
+  // Ичимлик итемларини автомат READY қилиш
   const autoUpdateDrinkItems = async (orders) => {
     const drinkItems = [];
     
@@ -36,23 +45,23 @@ function KitchenPanel() {
 
     if (drinkItems.length === 0) return;
 
-    console.log(`🥤 ${drinkItems.length} ta ichimlik avtomatik ishlov berilmoqda...`);
+    console.log(`🥤 ${drinkItems.length} та ичимлик автомат ишлов берилмоқда...`);
 
     for (const item of drinkItems) {
       try {
-        console.log(`🥤 Ichimlik READY qilinmoqda: ${item.product.name} (ID: ${item.id})`);
+        console.log(`🥤 Ичимлик READY қилинмоқда: ${item.product.name} (ID: ${item.id})`);
         setUpdatingItems((prev) => new Set(prev).add(item.id));
 
-        // Faqat WebSocket orqali yangilash
+        // Фақат WebSocket орқали янгилaш
         socket.emit('update_order_item_status', {
           itemId: item.id,
           status: 'READY',
         });
 
-        // Yangilashdan keyin kutish (WebSocket hodisasiga ishonamiz)
+        // Янгилaшдан кейин кутиш (WebSocket ҳодисасига ишонамиз)
         await new Promise((resolve) => setTimeout(resolve, 300));
       } catch (error) {
-        console.error('❌ Ichimlik avtomatik yangilashda xatolik:', error);
+        console.error('❌ Ичимлик автомат янгилaшда хатолик:', error);
       } finally {
         setUpdatingItems((prev) => {
           const newSet = new Set(prev);
@@ -63,38 +72,38 @@ function KitchenPanel() {
     }
   };
 
-  // API orqali orderlarni olish (faqat boshlang'ich yuklash uchun)
+  // API орқали ордерларни олиш (фақат бошланғич юклаш учун)
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
       const res = await axios.get('https://alikafecrm.uz/order/kitchen');
-      console.log('📦 Buyurtmalar yuklandi:', res.data);
+      console.log('📦 Буюртмалар юкланди:', res.data);
       setOrders(res.data);
       setTimeout(() => autoUpdateDrinkItems(res.data), 500);
     } catch (error) {
-      console.error('❌ Buyurtmalarni olishda xatolik:', error);
+      console.error('❌ Буюртмаларни олишда хатолик:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    // Boshlang'ich yuklash
+    // Бошланғич юклаш
     fetchOrders();
 
-    // WebSocket hodisalari
+    // WebSocket ҳодисалари
     const handleConnect = () => {
-      console.log('🟢 Kitchen Panel: WebSocket ulandi');
+      console.log('🟢 Ошхона Панели: WebSocket уланди');
       setIsConnected(true);
     };
 
     const handleDisconnect = () => {
-      console.log('🔴 Kitchen Panel: WebSocket uzildi');
+      console.log('🔴 Ошхона Панели: WebSocket узилди');
       setIsConnected(false);
     };
 
     const handleOrderCreated = (newOrder) => {
-      console.log('🆕 Yangi buyurtma keldi:', newOrder);
+      console.log('🆕 ЯнгИ буюртма келди:', newOrder);
       setOrders((prevOrders) => {
         if (prevOrders.some((order) => order.id === newOrder.id)) {
           return prevOrders;
@@ -106,9 +115,9 @@ function KitchenPanel() {
     };
 
     const handleOrderUpdated = (updatedOrder) => {
-      console.log('🔄 Buyurtma yangilandi:', updatedOrder);
+      console.log('🔄 Буюртма янгиланди:', updatedOrder);
       if (!updatedOrder.orderItems || !updatedOrder.table) {
-        console.log('⚠️ To‘liq ma‘lumot kelmadi, state yangilanmoqda...');
+        console.log(`⚠️ Тўлиқ маълумот келмади, state янгиланмоқда...`);
         return;
       }
 
@@ -118,19 +127,19 @@ function KitchenPanel() {
         )
       );
 
-      // Yangilangan buyurtmadagi ichimliklarni tekshirish
+      // Янгиланган буюртмадаги ичимликларни текшириш
       setTimeout(() => autoUpdateDrinkItems([updatedOrder]), 200);
     };
 
     const handleOrderDeleted = ({ id }) => {
-      console.log('🗑️ Buyurtma o‘chirildi:', id);
+      console.log(`🗑️ Буюртма ўчирилди:`, id);
       setOrders((prevOrders) => prevOrders.filter((order) => order.id !== id));
     };
 
     const handleOrderItemStatusUpdated = (updatedItem) => {
-      console.log('📝 Item status yangilandi:', updatedItem);
+      console.log('📝 Итем статус янгиланди:', updatedItem);
       if (!updatedItem.product || !updatedItem.product.name) {
-        console.log('⚠️ Product ma‘lumoti yo‘q');
+        console.log(`⚠️ Продукт маълумоти йўқ`);
         return;
       }
 
@@ -150,7 +159,7 @@ function KitchenPanel() {
     };
 
     const handleOrderItemDeleted = ({ id }) => {
-      console.log('🗑️ Item o‘chirildi:', id);
+      console.log(`🗑️ Итем ўчирилди:`, id);
       setOrders((prevOrders) =>
         prevOrders.map((order) => ({
           ...order,
@@ -167,13 +176,13 @@ function KitchenPanel() {
     socket.on('orderItemStatusUpdated', handleOrderItemStatusUpdated);
     socket.on('orderItemDeleted', handleOrderItemDeleted);
 
-    // Faqat xatolik bo'lsa yoki WebSocket ishlamasa polling
+    // Фақат хатолик бўлса ёки WebSocket ишламаса polling
     const pollInterval = setInterval(() => {
       if (!socket.connected) {
-        console.log('🔄 WebSocket uzilgan, polling ishlatilmoqda...');
+        console.log('🔄 WebSocket узилган, polling ишлатилмоқда...');
         fetchOrders();
       }
-    }, 60000); // 60 soniyada bir marta
+    }, 60000); // 60 сонияда бир марта
 
     // Cleanup
     return () => {
@@ -188,14 +197,14 @@ function KitchenPanel() {
     };
   }, []);
 
-  // Order item statusini yangilash
+  // Ордер итем статусни янгилaш
   const updateOrderItemStatus = async (itemId, status) => {
     try {
-      console.log(`🔄 Item ${itemId} status ${status}ga o‘zgartirilmoqda...`);
+      console.log(`🔄 Итем ${itemId} статус ${status}га ўзгартирилмоқда...`);
       setUpdatingItems((prev) => new Set(prev).add(itemId));
       socket.emit('update_order_item_status', { itemId, status });
     } catch (error) {
-      console.error('❌ Status yangilashda xatolik:', error);
+      console.error('❌ Статус янгилaшда хатолик:', error);
       setUpdatingItems((prev) => {
         const newSet = new Set(prev);
         newSet.delete(itemId);
@@ -204,22 +213,22 @@ function KitchenPanel() {
     }
   };
 
-  // Vaqtni formatlash
+  // Вақтни форматлаш
   const formatTime = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInMinutes = Math.floor((now - date) / (1000 * 60));
 
     if (diffInMinutes < 60) {
-      return `${diffInMinutes} daqiqa oldin`;
+      return `${diffInMinutes} дақиқа олдин`;
     }
-    return date.toLocaleTimeString('uz-UZ', {
+    return date.toLocaleTimeString('uz-Cyrl-UZ', {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
-  // Ko'rinadigan orderlarni filtrlash
+  // Кўринадиган ордерларни фильтрлаш
   const visibleOrders = orders.filter(
     (order) =>
       ['PENDING', 'COOKING'].includes(order.status) &&
@@ -231,33 +240,108 @@ function KitchenPanel() {
       )
   );
 
+  // Menu functions
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
+
+  const handleMenuItemClick = (action) => {
+    closeMenu();
+    switch (action) {
+      case 'home':
+        navigate('/kitchen');
+        break;
+      case 'archive':
+        navigate('/archive');
+        break;
+      case 'logout':
+        navigate('/logout');
+        break;
+      default:
+        break;
+    }
+  };
+
+  const currentPage = getCurrentPage();
+
+  // Helper function to get role text
+  const getRoleText = (role) => {
+    switch (role) {
+      case 'CASHIER':
+        return 'Официант';
+      case 'CUSTOMER':
+        return 'Админ';
+      default:
+        return role || 'Номаълум';
+    }
+  };
+
   return (
     <div className="kitchen-panel">
+      {/* Hamburger Menu */}
+      <div className={`hamburger-menu ${isMenuOpen ? 'open' : ''}`}>
+        <button 
+          className={`hamburger-btn ${isConnected ? 'connected' : 'disconnected'}`}
+          onClick={toggleMenu}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+
+      {/* Sidebar Menu */}
+      <div className={`sidebar-menu ${isMenuOpen ? 'open' : ''}`}>
+        <div className="sidebar-overlay" onClick={closeMenu}></div>
+        <div className="sidebar-content">
+          <div className="sidebar-header">
+            <h3>Меню</h3>
+            <button className="close-btn" aria-label="Close menu" onClick={closeMenu}>×</button>
+          </div>
+          <div className="sidebar-items">
+            <button 
+              className={`sidebar-item ${currentPage === 'home' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
+              onClick={() => handleMenuItemClick('home')}
+            >
+              <span className="sidebar-icon">🏠</span>
+              Бош саҳифа
+            </button>
+            <button 
+              className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
+              onClick={() => handleMenuItemClick('archive')}
+            >
+              <span className="sidebar-icon">📁</span>
+              Архив
+            </button>
+            <button 
+              className={`sidebar-item logout ${isConnected ? 'connected' : 'disconnected'}`}
+              onClick={() => handleMenuItemClick('logout')}
+            >
+              <span className="sidebar-icon">🚪</span>
+              Чиқиш
+            </button>
+          </div>
+        </div>
+      </div>
+
       <header className="kitchen-header">
         <div className="header-content">
           <h1 className="kitchen-title">
             <span className="kitchen-icon">👨‍🍳</span>
-            Oshxona Paneli
+            Ошхона Панели
           </h1>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div>
+          <div className="header-right">
+            <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
+              <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
               <div className="user-info">
-                <span className="user-role">Oshpaz: </span>
-                <span className="user-name">{localStorage.getItem('user') || 'Noma‘lum'}</span>
-              </div>
-              <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-                <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
-                <span className="status-text">
-                  {isConnected ? 'Real-time ulanish faol' : 'Offline rejim'}
-                </span>
+                <span className="user-role">Ошпаз: </span>
+                <span className="user-name">{localStorage.getItem('user') || `Номаълум`}</span>
               </div>
             </div>
-            <img
-              src={exit}
-              alt="exit"
-              className="exit-icon"
-              onClick={() => navigate('/logout')}
-            />
           </div>
         </div>
       </header>
@@ -266,15 +350,15 @@ function KitchenPanel() {
         {isLoading ? (
           <div className="loading-container">
             <div className="loading-spinner"></div>
-            <p className="loading-text">Buyurtmalar yuklanmoqda...</p>
+            <p className="loading-text">Буюртмалар юкланмоқда...</p>
           </div>
         ) : visibleOrders.length === 0 ? (
           <div className="no-orders">
             <div className="no-orders-icon">🍽️</div>
-            <h3>Hozir faol buyurtma yo‘q</h3>
-            <p>Yangi buyurtmalar kelganda bu yerda ko‘rinadi</p>
+            <h3>Ҳозир фаол буюртма йўқ</h3>
+            <p>Янги буюртмалар келганда бу ерда кўринади</p>
             <small style={{ color: '#666', marginTop: '10px', display: 'block' }}>
-              💡 Ichimliklar avtomatik Tayor qilinadi
+              💡 Ичимликлар автомат Тайёр қилинади
             </small>
           </div>
         ) : (
@@ -285,15 +369,23 @@ function KitchenPanel() {
                   <div className="order-info">
                     <h3 className="table-number">
                       <span className="table-icon">🪑</span>
-                      Stol {order.table?.number || 'N/A'}
+                      Стол {order.table?.number || 'N/A'}
                     </h3>
                     <p className="order-time">
                       <span className="time-icon">🕒</span>
                       {formatTime(order.createdAt)}
                     </p>
+                    <div className="order-user-info">
+                      <span className="user-role bold large">
+                        {getRoleText(order.user?.role)}: 
+                      </span> 
+                      <span className="user-name smaller">
+                        {order.user?.name || 'Номаълум'}
+                      </span>
+                    </div>
                   </div>
                   <div className={`order-status status-${order.status?.toLowerCase()}`}>
-                    {order.status === 'PENDING' ? '⏳ Kutilmoqda' : '🔥 Pishirilmoqda'}
+                    {order.status === 'PENDING' ? '⏳ Кутилмоқда' : '🔥 Пиширилмоқда'}
                   </div>
                 </div>
 
@@ -310,12 +402,12 @@ function KitchenPanel() {
                         <div className="item-details">
                           <div className="item-header">
                             <span className="item-name">
-                              {item.product?.name || 'Mahsulot nomi yuklanmoqda...'}
+                              {item.product?.name || 'Маҳсулот номи юкланмоқда...'}
                             </span>
                             <span className="item-count">×{item.count}</span>
                           </div>
                           <div className={`item-status status-${item.status?.toLowerCase()}`}>
-                            {item.status === 'PENDING' ? '⏳ Kutilmoqda' : '🔥 Pishirilmoqda'}
+                            {item.status === 'PENDING' ? '⏳ Кутилмоқда' : '🔥 Пиширилмоқда'}
                           </div>
                         </div>
 
@@ -329,12 +421,12 @@ function KitchenPanel() {
                               {updatingItems.has(item.id) ? (
                                 <>
                                   <span className="btn-spinner"></span>
-                                  Boshlanyapti...
+                                  Бошланяпти...
                                 </>
                               ) : (
                                 <>
                                   <span className="btn-icon">▶️</span>
-                                  Pishirishni boshlash
+                                  Пиширишни бошлаш
                                 </>
                               )}
                             </button>
@@ -348,12 +440,12 @@ function KitchenPanel() {
                               {updatingItems.has(item.id) ? (
                                 <>
                                   <span className="btn-spinner"></span>
-                                  Tugallanmoqda...
+                                  Тугалланмоқда...
                                 </>
                               ) : (
                                 <>
                                   <span className="btn-icon">✅</span>
-                                  Tayyor deb belgilash
+                                  Тайёр деб белгилаш
                                 </>
                               )}
                             </button>
@@ -366,10 +458,10 @@ function KitchenPanel() {
                 {order.orderItems.some((item) => isDrinkCategory(item.product)) && (
                   <div className="drinks-info">
                     <small style={{ color: '#28a745', fontStyle: 'italic' }}>
-                      🥤 Bu buyurtmadagi ichimliklar avtomatik READY qilindi
+                      🥤 Бу буюртмадаги ичимликлар автомат READY қилинди
                       <br />
                       <span style={{ fontSize: '0.8em', color: '#666' }}>
-                        Ichimliklar:{' '}
+                        Ичимликлар: {' '}
                         {order.orderItems
                           .filter((item) => isDrinkCategory(item.product))
                           .map((item) => `${item.product.name} (×${item.count})`)

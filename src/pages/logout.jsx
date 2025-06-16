@@ -24,26 +24,26 @@ function Logout() {
   return (
     <div className="logout-page">
       <div className="logout-container">
-        <h2>Rostan ham chiqib ketmoqchimisiz?</h2>
+        <h2>Ростан ҳам чиқиб кетмоқчимисиз?</h2>
         <div className="btn-group">
           <button className="btn cancel" onClick={() => navigate(-1)}>
-            Yo‘q, ortga
+            Йўқ, ортга
           </button>
           <button className="btn confirm" onClick={handleLogoutClick}>
-            Ha, albatta
+            Ҳа, албатта
           </button>
         </div>
 
         {showConfirm && (
           <div className="modal-overlay">
             <div className="modal">
-              <p>Aniq tark etmoqchimisiz?</p>
+              <p>Аниқ тарк этмоқчимисиз?</p>
               <div className="modal-buttons">
                 <button className="btn cancel" onClick={cancelLogout}>
-                  Yo‘q
+                  Йўқ
                 </button>
                 <button className="btn confirm" onClick={confirmLogout}>
-                  Ha
+                  Ҳа
                 </button>
               </div>
             </div>

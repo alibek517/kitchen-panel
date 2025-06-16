@@ -25,7 +25,7 @@ const SignIn = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       const res = await fetch('https://alikafecrm.uz/user');
-      if (!res.ok) throw new Error('Serverdan ma\'lumot olishda xatolik');
+      if (!res.ok) throw new Error('Сервердан маълумот олишда хатолик');
 
       const users = await res.json();
 
@@ -53,18 +53,18 @@ const SignIn = () => {
         if (usernameExists) {
           setErrors({
             username: '',
-            password: 'Parol noto\'g\'ri'
+            password: 'Парол нотўғри'
           });
         } else {
           setErrors({
-            username: 'Foydalanuvchi nomi noto\'g\'ri',
+            username: 'Фойдаланувчи номи нотўғри',
             password: ''
           });
         }
       }
     } catch (error) {
       setErrors({
-        username: 'Serverga ulanishda muammo!',
+        username: 'Серверга уланишда муаммо!',
         password: ''
       });
       console.error(error);
@@ -101,22 +101,22 @@ const SignIn = () => {
           <div className="logo-container">
             <Coffee className="logo-icon" />
           </div>
-          <h1 className="kirish">Oshpaz Paneli</h1>
+          <h1 className="kirish">Ошпаз Панели</h1>
           <p className="subtitle">
             <Sparkles className="subtitle-icon" />
-            Tizimga xush kelibsiz
+            Тизимга хуш келибсиз
           </p>
         </div>
 
         <div className="signin-form">
           {/* Username field */}
           <div className="form-group">
-            <label className="form-label">Foydalanuvchi nomi</label>
+            <label className="form-label">Фойдаланувчи номи</label>
             <div className="input-container">
               <User className={`input-icon ${focusedField === 'username' ? 'focused' : ''} ${errors.username ? 'error' : ''}`} />
               <input
                 type="text"
-                placeholder="Username kiriting"
+                placeholder="Username киритинг"
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value);
@@ -136,12 +136,12 @@ const SignIn = () => {
 
           {/* Password field */}
           <div className="form-group">
-            <label className="form-label">Parol</label>
+            <label className="form-label">Парол</label>
             <div className="password-field">
               <Lock className={`input-icon ${focusedField === 'password' ? 'focused' : ''} ${errors.password ? 'error' : ''}`} />
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Parolingizni kiriting"
+                placeholder="Паролингизни киритинг"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -159,8 +159,8 @@ const SignIn = () => {
                 type="button"
                 onClick={togglePasswordVisibility}
                 className="toggle-password"
-                title={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
-                aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                title={showPassword ? "Паролни яшириш" : "Паролни кўрсатиш"}
+                aria-label={showPassword ? "Паролни яшириш" : "Паролни кўрсатиш"}
               >
                 {showPassword ? <EyeOff className="toggle-icon" /> : <Eye className="toggle-icon" />}
               </button>
@@ -178,10 +178,10 @@ const SignIn = () => {
             {isLoading ? (
               <div className="loading-content">
                 <div className="loading-spinner"></div>
-                Kirish...
+                Кириш...
               </div>
             ) : (
-              'Tizimga Kirish'
+              'Тизимга Кириш'
             )}
           </button>
         </div>
@@ -189,8 +189,8 @@ const SignIn = () => {
         {/* Footer */}
         <div className="signin-footer">
           <p className="yangi">
-            Yangi foydalanuvchi bo'lsangiz,{' '}
-            <span className="admin-link">admin bilan bog'laning</span>
+            Янги фойдаланувчи бўлсангиз,{' '}
+            <span className="admin-link">админ билан боғланинг</span>
           </p>
         </div>
 

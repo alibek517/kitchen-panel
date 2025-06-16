@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Menyu from './Kitchenpanel';
 import Logout from './pages/logout';
 import SignIn from './pages/SingIn';
+import Arxiv from './pages/Arxiv';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -18,6 +19,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<SignIn />} />
         <Route path="/logout" element={<Logout />} />
+        <Route path="/archive" element={<Arxiv />} />
         <Route
           path="/kitchen"
           element={<Menyu />}
