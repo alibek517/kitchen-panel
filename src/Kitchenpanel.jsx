@@ -458,7 +458,7 @@ function KitchenPanel() {
                 {order.orderItems.some((item) => isDrinkCategory(item.product)) && (
                   <div className="drinks-info">
                     <small style={{ color: '#28a745', fontStyle: 'italic' }}>
-                      🥤 Бу буюртмадаги ичимликлар автомат READY қилинди
+                      🥤 Бу буюртмадаги ичимликлар автоматик Тайор қилинди
                       <br />
                       <span style={{ fontSize: '0.8em', color: '#666' }}>
                         Ичимликлар: {' '}
