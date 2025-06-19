@@ -76,13 +76,236 @@
     color: #6b7280;
   }
   
-  .grid {
-    display: grid;
+ /* Grid container for orders */
+.grid.gap-6 {
+  display: grid;
+  gap: 1.5rem; /* Maintains the gap-6 spacing */
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive grid */
+  width: 100vw; /* Full viewport width */
+  box-sizing: border-box;
+  margin: 0; /* Remove any default margins */
+  padding: 0; /* Remove any default padding */
+}
+
+/* Individual order card */
+.bg-white.rounded-xl.shadow-sm.border.border-gray-200.overflow-hidden {
+  display: flex;
+  flex-direction: column;
+  width: 100%; /* Takes full width of grid column */
+  max-width: 100%; /* Prevents card from exceeding container */
+  box-sizing: border-box;
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.bg-white.rounded-xl.shadow-sm.border.border-gray-200.overflow-hidden:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Padding inside the card */
+.p-6 {
+  padding: 1rem; /* Reduced padding for compact layout */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Order Header */
+.flex.flex-wrap.items-center.justify-between.mb-6 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem; /* Reduced margin for compactness */
+  width: 100%;
+}
+
+/* Left side of header (order info) */
+.flex.items-center.space-x-4 {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* Matches space-x-4 */
+}
+
+/* Order number and table */
+.text-xl.font-semibold.text-gray-900 {
+  font-size: 1.125rem; /* Slightly smaller for compactness */
+  font-weight: 600;
+  color: #111827;
+  margin: 0; /* Remove inline margin for consistency */
+}
+
+.text-gray-500.text-sm {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+/* Status badge */
+.px-4.py-2.rounded-full.border.flex.items-center.space-x-2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* Matches space-x-2 */
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Order details section */
+.flex.items-center.space-x-4.mb-4 {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* Matches space-x-4 */
+  margin-bottom: 1rem; /* Matches mb-4 */
+}
+
+/* Buyer info */
+.buyurtmachi {
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem; /* Slightly smaller for compactness */
+}
+
+.kimligi,
+.ismi {
+  margin: 0;
+  color: #111827;
+}
+
+.kimligi {
+  font-weight: 500;
+}
+
+.ismi {
+  font-weight: 400;
+}
+
+/* Toggle button */
+.text-white.px-4.py-2.rounded-lg.transition-all {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease-in-out;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.text-white.px-4.py-2.rounded-lg.transition-all.bg-green-500 {
+  background-color: #22c55e;
+}
+
+.text-white.px-4.py-2.rounded-lg.transition-all.bg-green-500:hover {
+  background-color: #16a34a;
+}
+
+.text-white.px-4.py-2.rounded-lg.transition-all.bg-red-500 {
+  background-color: #ef4444;
+}
+
+.text-white.px-4.py-2.rounded-lg.transition-all.bg-red-500:hover {
+  background-color: #dc2626;
+}
+
+/* Order items section */
+.border-t.border-gray-200.pt-4 {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+  width: 100%;
+}
+
+.font-semibold.text-gray-900.mb-3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+/* Order items grid */
+.grid.gap-3 {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+/* Individual order item */
+.flex.items-center.justify-between.bg-gray-50.p-3.rounded-lg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Item details */
+.flex.items-center.space-x-3 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.font-medium.text-gray-900 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  margin: 0;
+}
+
+.text-sm.text-gray-600 {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-top: 0.25rem;
+}
+
+/* Item price and status */
+.text-right {
+  text-align: right;
+}
+
+.font-semibold.text-gray-900 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.px-2.py-1.rounded.text-xs {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grid.gap-6 {
+    grid-template-columns: 1fr; /* Single column on smaller screens */
+    width: 100vw; /* Maintain full viewport width */
   }
-  
-  .gap-6 {
-    gap: 1.5rem;
+
+  .p-6 {
+    padding: 0.75rem; /* Further reduce padding on mobile */
   }
+
+  .text-xl.font-semibold.text-gray-900 {
+    font-size: 1rem; /* Smaller text on mobile */
+  }
+
+  .text-white.px-4.py-2.rounded-lg.transition-all {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
   
   .gap-3 {
     gap: 0.75rem;

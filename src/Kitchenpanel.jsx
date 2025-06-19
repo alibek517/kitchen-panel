@@ -2,6 +2,23 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { socket } from './socket';
+import { 
+  ChefHat, 
+  Home, 
+  Archive, 
+  LogOut, 
+  Utensils, 
+  Clock, 
+  Play, 
+  CheckCircle, 
+  Car, 
+  Phone, 
+  Coffee,
+  RefreshCw,
+  Users,
+  User,
+  HelpCircle
+} from 'lucide-react';
 import './KitchenPanel.css';
 
 function KitchenPanel() {
@@ -21,6 +38,29 @@ function KitchenPanel() {
       product.category?.name === 'Ичимлик' ||
       product.category?.id === 10
     );
+  };
+
+  // Буюртма турини аниқлаш (ресторанда ёки доставка)
+  const getOrderType = (order) => {
+    if (order.table && order.table.number) {
+      return {
+        type: 'dine_in',
+        display: `Стол ${order.table.number}`,
+        icon: Utensils
+      };
+    } else if (order.carrierNumber) {
+      return {
+        type: 'delivery',
+        display: order.carrierNumber,
+        icon: Car
+      };
+    } else {
+      return {
+        type: 'unknown',
+        display: 'Номаълум',
+        icon: HelpCircle
+      };
+    }
   };
 
   // Ҳозирги саҳифани аниқлаш
@@ -72,7 +112,13 @@ function KitchenPanel() {
     }
   };
 
-  // API орқали ордерларни олиш (фақат бошланғич юклаш учун)
+  // Manual refresh function
+  const handleRefresh = async () => {
+    console.log('🔄 Manual refresh triggered');
+    await fetchOrders();
+  };
+
+  // API орқали ордерларни олиш (фақат бошланғич юклaш учун)
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
@@ -88,7 +134,7 @@ function KitchenPanel() {
   };
 
   useEffect(() => {
-    // Бошланғич юклаш
+    // Бошланғич юклaш
     fetchOrders();
 
     // WebSocket ҳодисалари
@@ -116,7 +162,7 @@ function KitchenPanel() {
 
     const handleOrderUpdated = (updatedOrder) => {
       console.log('🔄 Буюртма янгиланди:', updatedOrder);
-      if (!updatedOrder.orderItems || !updatedOrder.table) {
+      if (!updatedOrder.orderItems) {
         console.log(`⚠️ Тўлиқ маълумот келмади, state янгиланмоқда...`);
         return;
       }
@@ -213,7 +259,7 @@ function KitchenPanel() {
     }
   };
 
-  // Вақтни форматлаш
+  // Вақтни форматлaш
   const formatTime = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -307,21 +353,21 @@ function KitchenPanel() {
               className={`sidebar-item ${currentPage === 'home' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
               onClick={() => handleMenuItemClick('home')}
             >
-              <span className="sidebar-icon">🏠</span>
+              <Home size={20} className="sidebar-icon" />
               Бош саҳифа
             </button>
             <button 
               className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
               onClick={() => handleMenuItemClick('archive')}
             >
-              <span className="sidebar-icon">📁</span>
+              <Archive size={20} className="sidebar-icon" />
               Архив
             </button>
             <button 
               className={`sidebar-item logout ${isConnected ? 'connected' : 'disconnected'}`}
               onClick={() => handleMenuItemClick('logout')}
             >
-              <span className="sidebar-icon">🚪</span>
+              <LogOut size={20} className="sidebar-icon" />
               Чиқиш
             </button>
           </div>
@@ -331,14 +377,26 @@ function KitchenPanel() {
       <header className="kitchen-header">
         <div className="header-content">
           <h1 className="kitchen-title">
-            <span className="kitchen-icon">👨‍🍳</span>
+            <ChefHat size={32} className="kitchen-icon" />
             Ошхона Панели
           </h1>
           <div className="header-right">
+            <button 
+              className={`refresh-btn ${isLoading ? 'loading' : ''}`}
+              onClick={handleRefresh}
+              disabled={isLoading}
+              title="Янгилаш"
+            >
+              <RefreshCw size={20} className={isLoading ? 'spin' : ''} />
+              Янгилаш
+            </button>
             <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
               <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
               <div className="user-info">
-                <span className="user-role">Ошпаз: </span>
+                <span className="user-role">
+                  <ChefHat size={16} />
+                  Ошпаз: 
+                </span>
                 <span className="user-name">{localStorage.getItem('user') || `Номаълум`}</span>
               </div>
             </div>
@@ -363,115 +421,151 @@ function KitchenPanel() {
           </div>
         ) : (
           <div className="orders-grid">
-            {visibleOrders.map((order) => (
-              <div className="order-card" key={order.id}>
-                <div className="order-header">
-                  <div className="order-info">
-                    <h3 className="table-number">
-                      <span className="table-icon">🪑</span>
-                      Стол {order.table?.number || 'N/A'}
-                    </h3>
-                    <p className="order-time">
-                      <span className="time-icon">🕒</span>
-                      {formatTime(order.createdAt)}
-                    </p>
-                    <div className="order-user-info">
-                      <span className="user-role bold large">
-                        {getRoleText(order.user?.role)}: 
-                      </span> 
-                      <span className="user-name smaller">
-                        {order.user?.name || 'Номаълум'}
-                      </span>
+            {visibleOrders.map((order) => {
+              const orderInfo = getOrderType(order);
+              
+              return (
+                <div className="order-card" key={order.id}>
+                  <div className="order-header">
+                    <div className="order-info">
+                      <h3 className="table-number">
+                        <orderInfo.icon size={20} className="table-icon" />
+                        {orderInfo.type === 'dine_in' ? ` ${order.table.number}` : 
+                         orderInfo.type === 'delivery' ? ` Доставка` : ' Номаълум'}
+                      </h3>
+                      {orderInfo.type === 'delivery' && (
+                        <p className="delivery-number">
+                          <Phone size={16} className="phone-icon" />
+                          {order.carrierNumber}
+                        </p>
+                      )}
+                      <p className="order-time">
+                        <Clock size={16} className="time-icon" />
+                        {formatTime(order.createdAt)}
+                      </p>
+                    </div>
+                    <div>
+                      <div className={`order-status status-${order.status?.toLowerCase()}`}>
+                        {order.status === 'PENDING' ? (
+                          <>
+                            <Clock size={16} />
+                            Кутилмоқда
+                          </>
+                        ) : (
+                          <>
+                            <ChefHat size={16} />
+                            Пиширилмоқда
+                          </>
+                        )}
+                      </div>
+                      <br />
+                      <div className="order-user-info">
+                        <span className="user-role bold large">
+                          <User size={16} />
+                          <b>{getRoleText(order.user?.role)}: </b>
+                        </span> 
+                        <span className="user-name smaller">
+                          <b>{order.user?.name || 'Номаълум'}</b>
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className={`order-status status-${order.status?.toLowerCase()}`}>
-                    {order.status === 'PENDING' ? '⏳ Кутилмоқда' : '🔥 Пиширилмоқда'}
-                  </div>
-                </div>
 
-                <div className="order-items">
-                  {order.orderItems
-                    .filter(
-                      (item) =>
-                        ['PENDING', 'COOKING'].includes(item.status) &&
-                        item.product &&
-                        !isDrinkCategory(item.product)
-                    )
-                    .map((item) => (
-                      <div key={item.id} className="order-item">
-                        <div className="item-details">
-                          <div className="item-header">
-                            <span className="item-name">
-                              {item.product?.name || 'Маҳсулот номи юкланмоқда...'}
-                            </span>
-                            <span className="item-count">×{item.count}</span>
-                          </div>
-                          <div className={`item-status status-${item.status?.toLowerCase()}`}>
-                            {item.status === 'PENDING' ? '⏳ Кутилмоқда' : '🔥 Пиширилмоқда'}
-                          </div>
-                        </div>
-
-                        <div className="item-actions">
-                          {item.status === 'PENDING' && (
-                            <button
-                              className="action-btn start-btn"
-                              onClick={() => updateOrderItemStatus(item.id, 'COOKING')}
-                              disabled={updatingItems.has(item.id)}
-                            >
-                              {updatingItems.has(item.id) ? (
+                  <div className="order-items">
+                    {order.orderItems
+                      .filter(
+                        (item) =>
+                          ['PENDING', 'COOKING'].includes(item.status) &&
+                          item.product &&
+                          !isDrinkCategory(item.product)
+                      )
+                      .map((item) => (
+                        <div key={item.id} className="order-item">
+                          <div className="item-details">
+                            <div className="item-header">
+                              <span style={{background:'green'}} className="item-count"><b>{item.count} - дона</b></span>
+                              <span className="item-name">
+                                {item.product?.name || 'Маҳсулот номи юкланмоқда...'}
+                              </span>
+                            </div>
+                            <div className={`item-status status-${item.status?.toLowerCase()}`}>
+                              {item.status === 'PENDING' ? (
                                 <>
-                                  <span className="btn-spinner"></span>
-                                  Бошланяпти...
+                                  <Clock size={14} />
+                                  Кутилмоқда
                                 </>
                               ) : (
                                 <>
-                                  <span className="btn-icon">▶️</span>
-                                  Пиширишни бошлаш
+                                  <ChefHat size={14} />
+                                  Пиширилмоқда
                                 </>
                               )}
-                            </button>
-                          )}
-                          {item.status === 'COOKING' && (
-                            <button
-                              className="action-btn done-btn"
-                              onClick={() => updateOrderItemStatus(item.id, 'READY')}
-                              disabled={updatingItems.has(item.id)}
-                            >
-                              {updatingItems.has(item.id) ? (
-                                <>
-                                  <span className="btn-spinner"></span>
-                                  Тугалланмоқда...
-                                </>
-                              ) : (
-                                <>
-                                  <span className="btn-icon">✅</span>
-                                  Тайёр деб белгилаш
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                </div>
+                            </div>
+                          </div>
 
-                {order.orderItems.some((item) => isDrinkCategory(item.product)) && (
-                  <div className="drinks-info">
-                    <small style={{ color: '#28a745', fontStyle: 'italic' }}>
-                      🥤 Бу буюртмадаги ичимликлар автоматик Тайор қилинди
-                      <br />
-                      <span style={{ fontSize: '0.8em', color: '#666' }}>
-                        Ичимликлар: {' '}
-                        {order.orderItems
-                          .filter((item) => isDrinkCategory(item.product))
-                          .map((item) => `${item.product.name} (×${item.count})`)
-                          .join(', ')}
-                      </span>
-                    </small>
+                          <div className="item-actions">
+                            {item.status === 'PENDING' && (
+                              <button
+                                className="action-btn start-btn"
+                                onClick={() => updateOrderItemStatus(item.id, 'COOKING')}
+                                disabled={updatingItems.has(item.id)}
+                              >
+                                {updatingItems.has(item.id) ? (
+                                  <>
+                                    <RefreshCw size={16} className="btn-spinner spin" />
+                                    Бошланяпти...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play size={16} className="btn-icon" />
+                                    Пиширишни бошлаш
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            {item.status === 'COOKING' && (
+                              <button
+                                className="action-btn done-btn"
+                                onClick={() => updateOrderItemStatus(item.id, 'READY')}
+                                disabled={updatingItems.has(item.id)}
+                              >
+                                {updatingItems.has(item.id) ? (
+                                  <>
+                                    <RefreshCw size={16} className="btn-spinner spin" />
+                                    Тугалланмоқда...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle size={16} className="btn-icon" />
+                                    Тайёр деб белгилaш
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {order.orderItems.some((item) => isDrinkCategory(item.product)) && (
+                    <div className="drinks-info">
+                      <small style={{ color: '#28a745', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Coffee size={16} />
+                        Бу буюртмадаги ичимликлар автоматик Тайёр қилинди
+                        <br />
+                        <span style={{ fontSize: '0.8em', color: '#666', marginLeft: '21px' }}>
+                          Ичимликлар: {' '}
+                          {order.orderItems
+                            .filter((item) => isDrinkCategory(item.product))
+                            .map((item) => `${item.product.name} (×${item.count})`)
+                            .join(', ')}
+                        </span>
+                      </small>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
