@@ -5,8 +5,11 @@ import './Arxiv.css';
 
 function OrderDisplay() {
   const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showOrderItems, setShowOrderItems] = useState({});
+  const [kitchenStaff, setKitchenStaff] = useState([]);
+  const [selectedStaff, setSelectedStaff] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -17,21 +20,48 @@ function OrderDisplay() {
     return 'home';
   };
 
-
-
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         const response = await fetch('https://alikafecrm.uz/order');
         const data = await response.json();
         setOrders(data);
+        setFilteredOrders(data);
+
+        // Extract unique kitchen staff
+        const staffSet = new Set();
+        data.forEach((order) => {
+          order.orderItems.forEach((item) => {
+            if (item.product?.assignedTo) {
+              staffSet.add(JSON.stringify(item.product.assignedTo));
+            }
+          });
+        });
+        const staffList = Array.from(staffSet).map((staff) => JSON.parse(staff));
+        setKitchenStaff(staffList);
       } catch (error) {
         console.error('Error fetching orders:', error);
         setOrders([]);
+        setFilteredOrders([]);
+        setKitchenStaff([]);
       }
     };
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    if (selectedStaff) {
+      const filtered = orders.map((order) => ({
+        ...order,
+        orderItems: order.orderItems.filter(
+          (item) => item.product?.assignedTo?.id === parseInt(selectedStaff)
+        ),
+      })).filter((order) => order.orderItems.length > 0);
+      setFilteredOrders(filtered);
+    } else {
+      setFilteredOrders(orders);
+    }
+  }, [selectedStaff, orders]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -141,7 +171,6 @@ function OrderDisplay() {
 
   const currentPage = getCurrentPage();
 
-  // Table or Carrier Number display logic
   const getTableOrCarrierDisplay = (order) => {
     if (order.table && order.table.number) {
       return (
@@ -168,7 +197,7 @@ function OrderDisplay() {
   };
 
   return (
-    <div style={{ background: '#242424' }} className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className={`hamburger-menu ${isMenuOpen ? 'open' : ''}`}>
         <button className="hamburger-btn" onClick={toggleMenu}>
           <span></span>
@@ -198,14 +227,30 @@ function OrderDisplay() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl backk mx-auto">
         <div className="mb-8">
-          <h1 style={{ color: 'white' }} className="text-3xl font-bold mb-2">Буюртмалар бошқаруви</h1>
-          <p style={{ color: 'white' }} className="text-gray-600">Ресторан буюртмалари рўйхати</p>
+          <h1 style={{ color: 'black' }} className="text-3xl font-bold mb-2">Буюртмалар бошқаруви</h1>
+          <p style={{ color: 'black' }} className="text-gray-600">Ресторан буюртмалари рўйхати</p>
+          <div className="mt-4">
+            <label style={{color:'black'}} htmlFor="staffFilter" className="text-white mr-2">Ошхона ходими бўйича қидириш</label>
+            <select
+              id="staffFilter"
+              value={selectedStaff}
+              onChange={(e) => setSelectedStaff(e.target.value)}
+              className="p-2 rounded-lg border border-gray-300"
+            >
+              <option value="">Барчаси</option>
+              {kitchenStaff.map((staff) => (
+                <option key={staff.id} value={staff.id}>
+                  {staff.name} ({staff.username})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="grid gap-6">
-          {orders.map((order) => (
+          {filteredOrders.map((order) => (
             <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-6">
                 <div className="flex flex-wrap items-center justify-between mb-6">
@@ -250,8 +295,13 @@ function OrderDisplay() {
                               <p className="font-medium text-gray-900">{item.product?.name || '—'}</p>
                               <p className="text-sm text-gray-600">
                                 Миқдори: {item.count} x {formatPrice(parseInt(item.product?.price || 0))}
-                                {(item.product) && (
+                                {item.product?.categoryId === 10 && (
                                   <span style={{ color: '#28a745', marginLeft: '10px' }}>(Ичимлик)</span>
+                                )}
+                                {item.product?.assignedTo && (
+                                  <span style={{ color: '#666', marginLeft: '10px' }}>
+                                    (Тайёрловчи: {item.product.assignedTo.name} {item.product.assignedTo.surname})
+                                  </span>
                                 )}
                               </p>
                             </div>
