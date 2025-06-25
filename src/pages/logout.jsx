@@ -12,8 +12,11 @@ function Logout() {
 
   const confirmLogout = () => {
     localStorage.removeItem('userRole');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        localStorage.removeItem('user');
+        localStorage.removeItem('password');
+        localStorage.removeItem('userId');
+
     navigate('/login');
   };
 

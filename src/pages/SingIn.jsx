@@ -40,7 +40,9 @@ const SignIn = () => {
         // Store user data in component state instead of localStorage
         // Navigate to menu page
         localStorage.setItem('userRole', foundUser.role);
+        localStorage.setItem('username', foundUser.username);
         localStorage.setItem('user', foundUser.name);
+        localStorage.setItem('password', foundUser.password);
         localStorage.setItem('userId', foundUser.id);
 
         window.location.href = '/kitchen';
@@ -213,64 +215,7 @@ const SignIn = () => {
           overflow-x: hidden;
         }
 
-        /* Keyframes */
-        @keyframes float {
-          0%, 100% { 
-            transform: translateY(0px) rotate(0deg); 
-          }
-          50% { 
-            transform: translateY(-20px) rotate(180deg); 
-          }
-        }
-
-        @keyframes glow {
-          0%, 100% { 
-            box-shadow: 0 0 20px rgba(255, 99, 71, 0.5); 
-          }
-          50% { 
-            box-shadow: 0 0 40px rgba(255, 99, 71, 0.8), 0 0 60px rgba(255, 140, 0, 0.3); 
-          }
-        }
-
-        @keyframes shimmer {
-          0% { 
-            background-position: -200% 0; 
-          }
-          100% { 
-            background-position: 200% 0; 
-          }
-        }
-
-        @keyframes pulse {
-          0%, 100% { 
-            opacity: 0.2; 
-          }
-          50% { 
-            opacity: 0.4; 
-          }
-        }
-
-        @keyframes spin {
-          from { 
-            transform: rotate(0deg); 
-          }
-          to { 
-            transform: rotate(360deg); 
-          }
-        }
-
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-
-        @keyframes eyeToggle {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-          100% { transform: scale(1); }
-        }
-
+        
         /* Main Container */
         .signin-container {
           min-height: 100vh;
@@ -282,6 +227,7 @@ const SignIn = () => {
           padding: 1rem;
           position: relative;
           overflow: hidden;
+          
         }
 
         /* Animated Background Elements */
@@ -351,6 +297,8 @@ const SignIn = () => {
           width: 100%;
           max-width: 28rem;
           z-index: 10;
+            margin-bottom: 300px;
+
         }
 
         /* Card Shimmer Effect */

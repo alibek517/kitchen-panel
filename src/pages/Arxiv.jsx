@@ -17,12 +17,7 @@ function OrderDisplay() {
     return 'home';
   };
 
-  // Ичимлик категориясини аниқлаш
-  const isDrinkCategory = (product) => {
-    if (!product || !product.category) return false;
-    const categoryName = product.category.name?.toLowerCase();
-    return categoryName === 'ичимлик' || categoryName === 'ichimlik';
-  };
+
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -77,7 +72,7 @@ function OrderDisplay() {
         return 'Тайёрланмоқда';
       case 'COMPLETED':
         return 'Якунланган';
-      case 'ARCHIVED':
+      case 'ARCHIVE':
         return 'Архивланган';
       case 'READY':
         return 'Тайёр';
@@ -197,7 +192,7 @@ function OrderDisplay() {
               <span className="sidebar-icon"><Archive size={20} /></span> Архив
             </button>
             <button className="sidebar-item logout" onClick={() => handleMenuItemClick('logout')}>
-              <span className="sidebar-icon"><LogOut size={20} /></span> Чиқиш
+              <span className="sidebar-icon"><LogOut color='red' size={20} /></span> Чиқиш
             </button>
           </div>
         </div>
@@ -255,7 +250,7 @@ function OrderDisplay() {
                               <p className="font-medium text-gray-900">{item.product?.name || '—'}</p>
                               <p className="text-sm text-gray-600">
                                 Миқдори: {item.count} x {formatPrice(parseInt(item.product?.price || 0))}
-                                {isDrinkCategory(item.product) && (
+                                {(item.product) && (
                                   <span style={{ color: '#28a745', marginLeft: '10px' }}>(Ичимлик)</span>
                                 )}
                               </p>
