@@ -468,47 +468,36 @@ function KitchenPanel() {
               return (
                 <div className="order-card" key={order.id}>
                   <div className="order-header">
-                    <div className="order-info">
-                      <h3 className="table-number">
-                        <orderInfo.icon size={20} className="table-icon" />
+                    <div className="order-single-line">
+                      <orderInfo.icon size={16} />
+                      <span>
                         {orderInfo.type === 'dine_in' ? `${order.table.name} ${order.table.number}` : 
-                         orderInfo.type === 'delivery' ? 'Доставка' : 'Номаълум'}
-                      </h3>
-                      {orderInfo.type === 'delivery' && (
-                        <p className="delivery-number">
-                          <Phone size={16} className="phone-icon" />
-                          {order.carrierNumber}
-                        </p>
-                      )}
-                      <p className="order-time">
-                        <Clock size={16} className="time-icon" />
-                        {formatTime(order.createdAt)}
-                      </p>
-                    </div>
-                    <div>
-                      <div className={`order-status status-${order.status.toLowerCase()}`}>
-                        {order.status === 'PENDING' ? (
-                          <>
-                            <Clock size={16} />
-                            Кутилмоқда
-                          </>
-                        ) : (
-                          <>
-                            <ChefHat size={16} />
-                            Пиширилмоқда
-                          </>
-                        )}
-                      </div>
-                      <br />
-                      <div className="order-user-info">
-                        <span className="user-role bold large">
-                          <User size={16} />
-                          <b>{roleText}: </b>
-                        </span> 
-                        <span className="user-name smaller">
-                          <b>{displayName}</b>
-                        </span>
-                      </div>
+                         orderInfo.type === 'delivery' ? `Доставка ${order.carrierNumber}` : 'Номаълум'}
+                      </span>
+                      <span> </span>
+                      <span> </span>
+                      <Clock size={14} />
+                      <span>{formatTime(order.createdAt)}</span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      {order.status === 'PENDING' ? <Clock size={14} /> : <ChefHat size={14} />}
+                      <span>{order.status === 'PENDING' ? 'Кутилмоқда' : 'Пиширилмоқда'}</span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <span> </span>
+                      <User size={14} />
+                      <span>{roleText}: {displayName}</span>
                     </div>
                   </div>
 

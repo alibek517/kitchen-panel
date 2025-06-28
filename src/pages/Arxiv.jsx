@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, User, MapPin, ShoppingCart, CheckCircle, Archive, Utensils, Truck, Info, Home, LogOut, X } from 'lucide-react';
+import { Eye, EyeOff, Clock, User, MapPin, ShoppingCart, CheckCircle, Archive, Utensils, Truck, Info, Home, LogOut, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Arxiv.css';
 
@@ -182,8 +182,9 @@ function OrderDisplay() {
     } else if (order.carrierNumber) {
       return (
         <>
-          <span className="table-icon"><Truck size={16} /></span>
-          Доставка: {order.carrierNumber}
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'5px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'5px'}}><span className="table-icon"><Truck size={16} /></span>
+          Доставка:</div><div> {order.carrierNumber}</div></div>
         </>
       );
     } else {
@@ -228,11 +229,11 @@ function OrderDisplay() {
       </div>
 
       <div className="max-w-7xl backk mx-auto">
-        <div className="mb-8">
+      <div className="mb-8">
           <h1 style={{ color: 'black' }} className="text-3xl font-bold mb-2">Буюртмалар бошқаруви</h1>
           <p style={{ color: 'black' }} className="text-gray-600">Ресторан буюртмалари рўйхати</p>
-          <div className="mt-4">
-            <label style={{color:'black'}} htmlFor="staffFilter" className="text-white mr-2">Ошхона ходими бўйича қидириш</label>
+          <div style={{display:'flex',gap:'15px'}} className="mt-4">
+            <label style={{color:'black'}} htmlFor="staffFilter" className="text-white mr-2">Ошхона ходими бўйича қидириш</label> 
             <select
               id="staffFilter"
               value={selectedStaff}
@@ -251,37 +252,38 @@ function OrderDisplay() {
 
         <div className="grid gap-6">
           {filteredOrders.map((order) => (
-            <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div style={{width:'100%'}} key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-6">
-                <div className="flex flex-wrap items-center justify-between mb-6">
-                  <div className="flex items-center space-x-4">
-                    <div>
+                <div style={{display:'flex',justifyContent:'center',alignItems:'center',width:'100%'}}>
+                <div style={{display:'flex',}} className="flex flex-wrap items-center justify-between mb-6">
+                  <div className="flex items-center space-x-4" style={{marginLeft:'0'}}>
+                    <div style={{display:'flex',alignItems:'start',gap:'15px'}} >
                       <h4 style={{ marginBottom: '0', fontSize: '15px' }} className="text-xl font-semibold text-gray-900">
                         Буюртма #{order.id}
                       </h4>
+                      <div>
                       <h3 className="table-number">
                         {getTableOrCarrierDisplay(order)}
                       </h3>
                       <p className="text-gray-500 text-sm">{formatDate(order.createdAt)}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className={`px-4 py-2 rounded-full border flex items-center space-x-2 ${getStatusColor(getStatusText(order.status))}`}>
-                    {getStatusIcon(getStatusText(order.status))}
-                    <span className="font-medium">{getStatusText(order.status)}</span>
-                  </div>
+                  </div> 
+                  
                 </div>
 
-                <div className="flex items-center space-x-4 mb-4">
+                <div style={{display:'flex'}} className="flex items-center space-x-4 mb-4">
                   <div className="buyurtmachi">
                     <p className="kimligi">{getRoleText(order.user?.role)}:</p>
                     <p className="ismi">{order.user?.name || 'Номаълум'}</p>
                   </div>
                   <button
-                    className={`text-white px-4 py-2 rounded-lg transition-all ${showOrderItems[order.id] ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
-                    onClick={() => toggleOrderItems(order.id)}
-                  >
-                    {showOrderItems[order.id] ? 'Буюртмаларни яшириш' : 'Буюртмаларни кўриш'}
-                  </button>
+  className={`text-white px-4 py-2 rounded-lg transition-all ${showOrderItems[order.id] ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+  onClick={() => toggleOrderItems(order.id)}
+>
+  {showOrderItems[order.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+</button>
+                </div>
                 </div>
 
                 {showOrderItems[order.id] && order.orderItems?.length > 0 && (
@@ -298,11 +300,7 @@ function OrderDisplay() {
                                 {item.product?.categoryId === 10 && (
                                   <span style={{ color: '#28a745', marginLeft: '10px' }}>(Ичимлик)</span>
                                 )}
-                                {item.product?.assignedTo && (
-                                  <span style={{ color: '#666', marginLeft: '10px' }}>
-                                    (Тайёрловчи: {item.product.assignedTo.name} {item.product.assignedTo.surname})
-                                  </span>
-                                )}
+                                
                               </p>
                             </div>
                           </div>
