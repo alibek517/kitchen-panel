@@ -485,19 +485,11 @@ function KitchenPanel() {
                       <span> </span>
                       <span> </span>
                       <span> </span>
-                      <span> </span>
-                      <span> </span>
-                      <span> </span>
-                      <span> </span>
-                      <span> </span>
+
                       {order.status === 'PENDING' ? <Clock size={14} /> : <ChefHat size={14} />}
                       <span>{order.status === 'PENDING' ? 'Кутилмоқда' : 'Пиширилмоқда'}</span>
-                      <span> </span>
-                      <span> </span>
-                      <span> </span>
-                      <span> </span>
-                      <User size={14} />
-                      <span>{roleText}: {displayName}</span>
+                      
+                      <span><User size={14} />{roleText}: {displayName}</span>
                     </div>
                   </div>
 

@@ -129,7 +129,6 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    padding: 10px 20px;
     width: 100%;
     box-sizing: border-box;
     max-width: 80rem;
@@ -148,9 +147,7 @@
       padding: 0.75rem;
     }
   
-    .backk {
-      padding: 10px;
-    }
+   
   
     .text-xl.font-semibold.text-gray-900 {
       font-size: 1rem;
@@ -162,12 +159,6 @@
     }
   }
   
-  @media (min-width: 1024px) {
-    .backk {
-      padding: 10px 40px;
-    }
-  }
-/* Left side of header (order info) */
 .flex.items-center.space-x-4 {
   display: flex;
   align-items: center;
@@ -1042,16 +1033,11 @@ select {
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    padding: 10px 20px; /* Reduced padding for better fit */
     width: 100%;
     box-sizing: border-box;
   }
   
-  @media (min-width: 1024px) {
-    .backk {
-      padding: 10px 130px; /* Larger padding for larger screens */
-    }
-  }
+
 select:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
@@ -1066,5 +1052,4 @@ label {
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  padding: 10px 130px;
 }
