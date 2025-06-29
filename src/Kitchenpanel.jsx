@@ -29,10 +29,86 @@ function KitchenPanel() {
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
   const [selectedUsername, setSelectedUsername] = useState('');
   const [kitchenUsers, setKitchenUsers] = useState([]);
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-
   const audio = new Audio(notificationSound);
+
+  const SessionExpiredModal = ({ isOpen, onConfirm }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div
+      className="modal-overlay"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10000,
+      }}
+      >
+      <div
+        className="modal-content"
+        style={{
+        backgroundColor: 'white',
+        padding: '30px',
+        borderRadius: '12px',
+        maxWidth: '400px',
+        width: '90%',
+        textAlign: 'center',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+        }}
+      >
+        <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏰</div>
+        <h2
+        style={{
+          color: '#333',
+          marginBottom: '15px',
+          fontSize: '24px',
+          fontWeight: 'bold',
+        }}
+        >
+        Иш вақти тугади.
+        </h2>
+        <p
+        style={{
+          color: '#666',
+          marginBottom: '25px',
+          fontSize: '16px',
+          lineHeight: '1.5',
+        }}
+        >
+        Иш вақтиз тугади, энди иш бошланса кирасиз.
+        </p>
+        <button
+        onClick={onConfirm}
+        style={{
+          padding: '12px 24px',
+          backgroundColor: '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '16px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          minWidth: '100px',
+          transition: 'all 0.3s ease',
+        }}
+        onMouseEnter={(e) => (e.target.style.backgroundColor = '#0056b3')}
+        onMouseLeave={(e) => (e.target.style.backgroundColor = '#007bff')}
+        >
+        OK
+        </button>
+      </div>
+      </div>
+    );
+  };
 
   const getOrderType = (order) => {
     if (order.table && order.table.number) {
@@ -87,7 +163,6 @@ function KitchenPanel() {
       console.log('👨‍🍳 Ошпазлар юкланди:', kitchenUsers);
       setKitchenUsers(kitchenUsers);
       
-      // Set default selected username from localStorage if it exists in kitchenUsers
       const storedUser = localStorage.getItem('user');
       if (storedUser && kitchenUsers.includes(storedUser)) {
         setSelectedUsername(storedUser);
@@ -96,6 +171,30 @@ function KitchenPanel() {
     } catch (error) {
       console.error('❌ Ошпазларни олишда хатолик:', error.message);
     }
+  };
+
+  const checkSessionStatus = async () => {
+    try {
+      const response = await axios.get('https://alikafecrm.uz/auth-check/1', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      setShowSessionExpiredModal(!response.data.status);
+    } catch (error) {
+      console.error('Session check error:', error);
+      setShowSessionExpiredModal(true);
+    }
+  };
+
+  const handleSessionExpiredConfirm = () => {
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
+    localStorage.removeItem('user');
+    localStorage.removeItem('password');
+    localStorage.removeItem('userId');
+    navigate('/login');
   };
 
   const autoRefresh = async () => {
@@ -111,8 +210,10 @@ function KitchenPanel() {
   useEffect(() => {
     fetchOrders();
     fetchKitchenUsers();
+    checkSessionStatus();
 
-    const autoRefreshInterval = setInterval(autoRefresh, 180000);
+    const autoRefreshInterval = setInterval(autoRefresh, 10000);
+    const sessionCheckInterval = setInterval(checkSessionStatus, 5000);
 
     const handleConnect = () => {
       console.log('🟢 Ошхона Панели: WebSocket уланди');
@@ -184,6 +285,12 @@ function KitchenPanel() {
       console.log('📝 Итем статус янгиланди:', updatedItem);
       setLastUpdateTime(new Date());
       
+      if (updatedItem.status === 'PENDING') {
+        audio.play().catch((error) => {
+          console.error('❌ Audio playback error:', error.message);
+        });
+      }
+
       if (!updatedItem.product || !updatedItem.product.name) {
         console.log(`⚠️ Продукт маълумоти йўқ`);
         return;
@@ -274,6 +381,7 @@ function KitchenPanel() {
       socket.off('reconnect');
       clearInterval(pollInterval);
       clearInterval(autoRefreshInterval);
+      clearInterval(sessionCheckInterval);
     };
   }, []);
 
@@ -485,10 +593,8 @@ function KitchenPanel() {
                       <span> </span>
                       <span> </span>
                       <span> </span>
-
                       {order.status === 'PENDING' ? <Clock size={14} /> : <ChefHat size={14} />}
                       <span>{order.status === 'PENDING' ? 'Кутилмоқда' : 'Пиширилмоқда'}</span>
-                      
                       <span><User size={14} />{roleText}: {displayName}</span>
                     </div>
                   </div>
@@ -574,6 +680,12 @@ function KitchenPanel() {
               );
             })}
           </div>
+        )}
+        {showSessionExpiredModal && (
+          <SessionExpiredModal
+            isOpen={showSessionExpiredModal}
+            onConfirm={handleSessionExpiredConfirm}
+          />
         )}
       </div>
     </div>

@@ -21,9 +21,24 @@ const SignIn = () => {
     const cleanPassword = password.trim();
 
     try {
-      // Simulate API call delay for loading state
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
+       // First check auth status
+       const authRes = await fetch('https://alikafecrm.uz/auth-check/1');
+       if (!authRes.ok) throw new Error('Auth tekshirishda xatolik');
+       
+       const authData = await authRes.json();
+       
+       if (!authData.status) {
+         setErrors({
+           username: 'Иш ҳали бошланмади!',
+           password: 'Иш ҳали бошланмади!'
+         });
+         setIsLoading(false);
+         return;
+       }
+
+      // Simulate API call delay for loading state
       const res = await fetch('https://alikafecrm.uz/user');
       if (!res.ok) throw new Error('Сервердан маълумот олишда хатолик');
 
@@ -67,7 +82,7 @@ const SignIn = () => {
     } catch (error) {
       setErrors({
         username: 'Серверга уланишда муаммо!',
-        password: ''
+        password: 'Серверга уланишда муаммо!'
       });
       console.error(error);
     } finally {
