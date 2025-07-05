@@ -12,7 +12,6 @@ import {
   Play, 
   CheckCircle, 
   Car, 
-  Phone, 
   HelpCircle,
   RefreshCw,
   User,
@@ -39,73 +38,73 @@ function KitchenPanel() {
 
     return (
       <div
-      className="modal-overlay"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 10000,
-      }}
-      >
-      <div
-        className="modal-content"
+        className="modal-overlay"
         style={{
-        backgroundColor: 'white',
-        padding: '30px',
-        borderRadius: '12px',
-        maxWidth: '400px',
-        width: '90%',
-        textAlign: 'center',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10000,
         }}
       >
-        <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏰</div>
-        <h2
-        style={{
-          color: '#333',
-          marginBottom: '15px',
-          fontSize: '24px',
-          fontWeight: 'bold',
-        }}
+        <div
+          className="modal-content"
+          style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '12px',
+            maxWidth: '400px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+          }}
         >
-        Иш вақти тугади.
-        </h2>
-        <p
-        style={{
-          color: '#666',
-          marginBottom: '25px',
-          fontSize: '16px',
-          lineHeight: '1.5',
-        }}
-        >
-        Иш вақтиз тугади, энди иш бошланса кирасиз.
-        </p>
-        <button
-        onClick={onConfirm}
-        style={{
-          padding: '12px 24px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: '600',
-          cursor: 'pointer',
-          minWidth: '100px',
-          transition: 'all 0.3s ease',
-        }}
-        onMouseEnter={(e) => (e.target.style.backgroundColor = '#0056b3')}
-        onMouseLeave={(e) => (e.target.style.backgroundColor = '#007bff')}
-        >
-        OK
-        </button>
-      </div>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏰</div>
+          <h2
+            style={{
+              color: '#333',
+              marginBottom: '15px',
+              fontSize: '24px',
+              fontWeight: 'bold',
+            }}
+          >
+            Иш вақти тугади.
+          </h2>
+          <p
+            style={{
+              color: '#666',
+              marginBottom: '25px',
+              fontSize: '16px',
+              lineHeight: '1.5',
+            }}
+          >
+            Иш вақтиз тугади, энди иш бошланса кирасиз.
+          </p>
+          <button
+            onClick={onConfirm}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              minWidth: '100px',
+              transition: 'all 0.3s ease',
+            }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = '#0056b3')}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = '#007bff')}
+          >
+            OK
+          </button>
+        </div>
       </div>
     );
   };
@@ -139,17 +138,26 @@ function KitchenPanel() {
     return 'home';
   };
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (isInitialFetch = false) => {
     try {
-      setIsLoading(true);
+      if (isInitialFetch) {
+        setIsLoading(true);
+      }
       const res = await axios.get('https://alikafecrm.uz/order/kitchen');
       console.log('📦 Буюртмалар юкланди:', res.data);
-      setOrders(res.data);
+      // Ensure only valid orders are set (e.g., with required fields)
+      const validOrders = res.data.filter(order => order.id && order.orderItems);
+      setOrders(validOrders);
       setLastUpdateTime(new Date());
     } catch (error) {
       console.error('❌ Буюртмаларни олишда хатолик:', error.message);
+      // Keep existing orders if fetch fails to prevent UI from breaking
+      setOrders((prevOrders) => prevOrders);
+      // Optionally, you could add a state to show an error message to the user
     } finally {
-      setIsLoading(false);
+      if (isInitialFetch) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -170,6 +178,7 @@ function KitchenPanel() {
       }
     } catch (error) {
       console.error('❌ Ошпазларни олишда хатолик:', error.message);
+      setKitchenUsers([]); // Set empty array on failure to avoid breaking UI
     }
   };
 
@@ -182,9 +191,11 @@ function KitchenPanel() {
         },
       });
       setShowSessionExpiredModal(!response.data.status);
+      return response.data.status;
     } catch (error) {
       console.error('Session check error:', error);
       setShowSessionExpiredModal(true);
+      return false;
     }
   };
 
@@ -198,9 +209,16 @@ function KitchenPanel() {
   };
 
   const autoRefresh = async () => {
+    // Check session status before refreshing
+    const isSessionValid = await checkSessionStatus();
+    if (!isSessionValid) {
+      console.log('🔴 Session expired, stopping auto-refresh');
+      return;
+    }
+
     if (!socket.connected) {
       console.log('🔄 Автоматик янгилаш: WebSocket узилган, маълумотлар янгиланмоқда...');
-      await fetchOrders();
+      await fetchOrders(false); // Pass false to prevent loader
     } else {
       console.log('🔄 Автоматик янгилаш: WebSocket фаол, фақат вақт янгиланмоқда');
       setLastUpdateTime(new Date());
@@ -208,12 +226,12 @@ function KitchenPanel() {
   };
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(true); // Initial fetch with loader
     fetchKitchenUsers();
     checkSessionStatus();
 
-    const autoRefreshInterval = setInterval(autoRefresh, 10000);
-    const sessionCheckInterval = setInterval(checkSessionStatus, 5000);
+    // Set auto-refresh to check session every 3 seconds
+    const autoRefreshInterval = setInterval(autoRefresh, 3000);
 
     const handleConnect = () => {
       console.log('🟢 Ошхона Панели: WebSocket уланди');
@@ -359,13 +377,13 @@ function KitchenPanel() {
 
     socket.on('reconnect', () => {
       console.log('🔄 WebSocket qayta ulandi, ma\'lumotlar yangilanmoqda...');
-      fetchOrders();
+      fetchOrders(false); // Pass false to prevent loader on reconnect
     });
 
     const pollInterval = setInterval(() => {
       if (!socket.connected) {
         console.log('🔄 WebSocket узилган, polling ишлатилмоқда...');
-        fetchOrders();
+        fetchOrders(false); // Pass false to prevent loader during polling
       }
     }, 60000);
 
@@ -381,7 +399,6 @@ function KitchenPanel() {
       socket.off('reconnect');
       clearInterval(pollInterval);
       clearInterval(autoRefreshInterval);
-      clearInterval(sessionCheckInterval);
     };
   }, []);
 
