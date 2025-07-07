@@ -199,41 +199,16 @@ function OrderDisplay() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className={`hamburger-menu ${isMenuOpen ? 'open' : ''}`}>
-        <button className="hamburger-btn" onClick={toggleMenu}>
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-      </div>
 
-      <div className={`sidebar-menu ${isMenuOpen ? 'open' : ''}`}>
-        <div className="sidebar-overlay" onClick={closeMenu}></div>
-        <div className="sidebar-content">
-          <div className="sidebar-header">
-            <h3>Меню</h3>
-            <button className="close-btn" onClick={closeMenu}><X size={24} /></button>
-          </div>
-          <div className="sidebar-items">
-            <button className={`sidebar-item ${currentPage === 'home' ? 'active' : ''}`} onClick={() => handleMenuItemClick('home')}>
+      <div className="max-w-7xl backk mx-auto">
+      <div style={{display:'flex',gap:'35px',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap'}}>
+      <button className={`sidebar-item ${currentPage === 'home' ? 'active' : ''}`} onClick={() => handleMenuItemClick('home')}>
               <span className="sidebar-icon"><Home size={20} /></span> Бош саҳифа
             </button>
             <button className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''}`} onClick={() => handleMenuItemClick('archive')}>
               <span className="sidebar-icon"><Archive size={20} /></span> Архив
             </button>
-            <button className="sidebar-item logout" onClick={() => handleMenuItemClick('logout')}>
-              <span className="sidebar-icon"><LogOut color='red' size={20} /></span> Чиқиш
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl backk mx-auto">
-      <div className="mb-8">
-          <h1 style={{ color: 'black' }} className="text-3xl font-bold mb-2">Буюртмалар бошқаруви</h1>
-          <p style={{ color: 'black' }} className="text-gray-600">Ресторан буюртмалари рўйхати</p>
           <div style={{display:'flex',gap:'15px'}} className="mt-4">
-            <label style={{color:'black'}} htmlFor="staffFilter" className="text-white mr-2">Ошхона ходими бўйича қидириш</label> 
             <select
               id="staffFilter"
               value={selectedStaff}

@@ -41,12 +41,6 @@
   color: #6b73e0;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
 .auto-refresh-info small {
   color: #718096;
   font-size: 0.85rem;

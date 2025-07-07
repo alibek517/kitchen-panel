@@ -496,26 +496,10 @@ function KitchenPanel() {
 
   return (
     <div className="kitchen-panel">
-      <div className={`hamburger-menu ${isMenuOpen ? 'open' : ''}`}>
-        <button 
-          className={`hamburger-btn ${isConnected ? 'connected' : 'disconnected'}`}
-          onClick={toggleMenu}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-      </div>
 
-      <div className={`sidebar-menu ${isMenuOpen ? 'open' : ''}`}>
-        <div className="sidebar-overlay" onClick={closeMenu}></div>
-        <div className="sidebar-content">
-          <div className="sidebar-header">
-            <h3>Меню</h3>
-            <button className="close-btn" aria-label="Close menu" onClick={closeMenu}>×</button>
-          </div>
-          <div className="sidebar-items">
-            <button 
+      <header className="kitchen-header">
+        <div style={{display:'flex',gap:'35px',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap'}}>
+        <button 
               className={`sidebar-item ${currentPage === 'home' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
               onClick={() => handleMenuItemClick('home')}
             >
@@ -529,30 +513,11 @@ function KitchenPanel() {
               <Archive size={20} className="sidebar-icon" />
               Архив
             </button>
-            <button 
-              className={`sidebar-item logout ${isConnected ? 'connected' : 'disconnected'}`}
-              onClick={() => handleMenuItemClick('logout')}
-            >
-              <LogOut color="red" size={20} className="sidebar-icon" />
-              Чиқиш
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <header className="kitchen-header">
-        <div className="header-content">
-          <h1 style={{ marginLeft: '40px' }} className="kitchen-title">
-            <ChefHat size={32} className="kitchen-icon" />
-            Ошхона Панели
-          </h1>
           <div className="header-right">
             <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-              <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
               <div className="user-info">
                 <span className="user-role">
                   <ChefHat size={16} />
-                  Ошпаз: 
                 </span>
                 <span className="user-name">{localStorage.getItem('user') || 'Номаълум'}</span>
               </div>
