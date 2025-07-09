@@ -247,28 +247,29 @@ function KitchenPanel() {
     const handleOrderCreated = (newOrder) => {
       console.log('🆕 ЯНГИ буюртма келди:', newOrder);
       setLastUpdateTime(new Date());
-      
+    
       audio.play().catch((error) => {
         console.error('❌ Audio playback error:', error.message);
       });
-
+    
       setOrders((prevOrders) => {
-        const existingOrder = prevOrders.find(order => order.id === newOrder.id);
+        const existingOrder = prevOrders.find((order) => order.id === newOrder.id);
         if (existingOrder) {
           console.log('⚠️ Буюртма аллақачон мавжуд, қайта қўшилмайди');
           return prevOrders;
         }
-        
-        const updatedOrders = [newOrder, ...prevOrders];
+    
+        // Append new order to the end of the list
+        const updatedOrders = [...prevOrders, newOrder];
         console.log('✅ Янги буюртма қўшилди, жами:', updatedOrders.length);
         return updatedOrders;
       });
     };
-
+    
     const handleOrderUpdated = (updatedOrder) => {
       console.log('🔄 Буюртма янгиланди:', updatedOrder);
       setLastUpdateTime(new Date());
-      
+    
       if (!updatedOrder.orderItems) {
         console.log(`⚠️ Тўлиқ маълумот келмади, ID: ${updatedOrder.id}`);
         setOrders((prevOrders) =>
@@ -278,20 +279,22 @@ function KitchenPanel() {
         );
         return;
       }
-
+    
       setOrders((prevOrders) => {
-        const orderExists = prevOrders.some(order => order.id === updatedOrder.id);
-        
+        const orderExists = prevOrders.some((order) => order.id === updatedOrder.id);
+    
         if (!orderExists) {
           console.log('🆕 Янгиланган буюртма мавжуд эмас, қўшилмоқда:', updatedOrder.id);
-          return [updatedOrder, ...prevOrders];
+          // Append updated order to the end if it doesn't exist
+          return [...prevOrders, updatedOrder];
         }
-        
+    
         return prevOrders.map((order) =>
           order.id === updatedOrder.id ? updatedOrder : order
         );
       });
     };
+
 
     const handleOrderDeleted = ({ id }) => {
       console.log(`🗑️ Буюртма ўчирилди:`, id);
