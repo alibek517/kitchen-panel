@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Clock, User, MapPin, ShoppingCart, CheckCircle, Archive, Utensils, Truck, Info, Home, LogOut, X } from 'lucide-react';
+import { Eye, EyeOff, Clock, User, MapPin, ShoppingCart, CheckCircle, Archive, Utensils, Truck, Info, Home, LogOut, X,UtensilsCrossed } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Arxiv.css';
 
@@ -17,6 +17,7 @@ function OrderDisplay() {
     const path = location.pathname;
     if (path === '/kitchen') return 'home';
     if (path === '/archive') return 'archive';
+    if (path === '/maxsulotlar') return 'maxsulotlar';
     return 'home';
   };
 
@@ -161,6 +162,9 @@ function OrderDisplay() {
       case 'archive':
         navigate('/archive');
         break;
+      case 'maxsulotlar':
+        navigate('/maxsulotlar');
+        break;
       case 'logout':
         navigate('/logout');
         break;
@@ -182,9 +186,9 @@ function OrderDisplay() {
     } else if (order.carrierNumber) {
       return (
         <>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'5px'}}>
-          <div style={{display:'flex',alignItems:'center',gap:'5px'}}><span className="table-icon"><Truck size={16} /></span>
-          Доставка:</div><div> {order.carrierNumber}</div></div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><span className="table-icon"><Truck size={16} /></span>
+              Доставка:</div><div> {order.carrierNumber}</div></div>
         </>
       );
     } else {
@@ -201,14 +205,17 @@ function OrderDisplay() {
     <div className="min-h-screen bg-gray-50 p-6">
 
       <div className="max-w-7xl backk mx-auto">
-      <div style={{display:'flex',gap:'35px',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap'}}>
-      <button className={`sidebar-item ${currentPage === 'home' ? 'active' : ''}`} onClick={() => handleMenuItemClick('home')}>
-              <span className="sidebar-icon"><Home size={20} /></span> Бош саҳифа
-            </button>
-            <button className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''}`} onClick={() => handleMenuItemClick('archive')}>
-              <span className="sidebar-icon"><Archive size={20} /></span> Архив
-            </button>
-          <div style={{display:'flex',gap:'15px'}} className="mt-4">
+        <div style={{ display: 'flex', gap: '35px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button className={`sidebar-item ${currentPage === 'home' ? 'active' : ''}`} onClick={() => handleMenuItemClick('home')}>
+            <span className="sidebar-icon"><Home size={20} /></span> Бош саҳифа
+          </button>
+          <button className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''}`} onClick={() => handleMenuItemClick('archive')}>
+            <span className="sidebar-icon"><Archive size={20} /></span> Архив
+          </button>
+          <button className={`sidebar-item ${currentPage === 'maxsulotlar' ? 'active' : ''}`} onClick={() => handleMenuItemClick('maxsulotlar')}>
+            <span className="sidebar-icon"><UtensilsCrossed size={20} /></span> Буюртмалар
+          </button>
+          <div style={{ display: 'flex', gap: '15px' }} className="mt-4">
             <select
               id="staffFilter"
               value={selectedStaff}
@@ -227,38 +234,38 @@ function OrderDisplay() {
 
         <div className="grid gap-6">
           {filteredOrders.map((order) => (
-            <div style={{width:'100%'}} key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div style={{ width: '100%' }} key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-6">
-                <div style={{display:'flex',justifyContent:'center',alignItems:'center',width:'100%'}}>
-                <div style={{display:'flex',}} className="flex flex-wrap items-center justify-between mb-6">
-                  <div className="flex items-center space-x-4" style={{marginLeft:'0'}}>
-                    <div style={{display:'flex',alignItems:'start',gap:'15px'}} >
-                      <h4 style={{ marginBottom: '0', fontSize: '15px' }} className="text-xl font-semibold text-gray-900">
-                        Буюртма #{order.id}
-                      </h4>
-                      <div>
-                      <h3 className="table-number">
-                        {getTableOrCarrierDisplay(order)}
-                      </h3>
-                      <p className="text-gray-500 text-sm">{formatDate(order.createdAt)}</p>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                  <div style={{ display: 'flex', }} className="flex flex-wrap items-center justify-between mb-6">
+                    <div className="flex items-center space-x-4" style={{ marginLeft: '0' }}>
+                      <div style={{ display: 'flex', alignItems: 'start', gap: '15px' }} >
+                        <h4 style={{ marginBottom: '0', fontSize: '15px' }} className="text-xl font-semibold text-gray-900">
+                          Буюртма #{order.id}
+                        </h4>
+                        <div>
+                          <h3 className="table-number">
+                            {getTableOrCarrierDisplay(order)}
+                          </h3>
+                          <p className="text-gray-500 text-sm">{formatDate(order.createdAt)}</p>
+                        </div>
                       </div>
                     </div>
-                  </div> 
-                  
-                </div>
 
-                <div style={{display:'flex'}} className="flex items-center space-x-4 mb-4">
-                  <div className="buyurtmachi">
-                    <p className="kimligi">{getRoleText(order.user?.role)}:</p>
-                    <p className="ismi">{order.user?.name || 'Номаълум'}</p>
                   </div>
-                  <button
-  className={`text-white px-4 py-2 rounded-lg transition-all ${showOrderItems[order.id] ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
-  onClick={() => toggleOrderItems(order.id)}
->
-  {showOrderItems[order.id] ? <EyeOff size={16} /> : <Eye size={16} />}
-</button>
-                </div>
+
+                  <div style={{ display: 'flex' }} className="flex items-center space-x-4 mb-4">
+                    <div className="buyurtmachi">
+                      <p className="kimligi">{getRoleText(order.user?.role)}:</p>
+                      <p className="ismi">{order.user?.name || 'Номаълум'}</p>
+                    </div>
+                    <button
+                      className={`text-white px-4 py-2 rounded-lg transition-all ${showOrderItems[order.id] ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+                      onClick={() => toggleOrderItems(order.id)}
+                    >
+                      {showOrderItems[order.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
 
                 {showOrderItems[order.id] && order.orderItems?.length > 0 && (
@@ -275,7 +282,7 @@ function OrderDisplay() {
                                 {item.product?.categoryId === 10 && (
                                   <span style={{ color: '#28a745', marginLeft: '10px' }}>(Ичимлик)</span>
                                 )}
-                                
+
                               </p>
                             </div>
                           </div>

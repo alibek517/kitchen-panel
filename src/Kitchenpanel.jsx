@@ -2,19 +2,20 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { socket } from './socket';
-import { 
-  ChefHat, 
-  Home, 
-  Archive, 
-  LogOut, 
-  Utensils, 
-  Clock, 
-  Play, 
-  CheckCircle, 
-  Car, 
+import {
+  ChefHat,
+  Home,
+  Archive,
+  LogOut,
+  Utensils,
+  Clock,
+  Play,
+  CheckCircle,
+  Car,
   HelpCircle,
   RefreshCw,
   User,
+  UtensilsCrossed,
 } from 'lucide-react';
 import './KitchenPanel.css';
 import notificationSound from './assets/synthesize.mp3';
@@ -135,6 +136,7 @@ function KitchenPanel() {
     const path = location.pathname;
     if (path === '/kitchen') return 'home';
     if (path === '/archive') return 'archive';
+    if (path === '/maxsulotlar') return 'maxsulotlar';
     return 'home';
   };
 
@@ -170,7 +172,7 @@ function KitchenPanel() {
         .sort();
       console.log('👨‍🍳 Ошпазлар юкланди:', kitchenUsers);
       setKitchenUsers(kitchenUsers);
-      
+
       const storedUser = localStorage.getItem('user');
       if (storedUser && kitchenUsers.includes(storedUser)) {
         setSelectedUsername(storedUser);
@@ -247,29 +249,29 @@ function KitchenPanel() {
     const handleOrderCreated = (newOrder) => {
       console.log('🆕 ЯНГИ буюртма келди:', newOrder);
       setLastUpdateTime(new Date());
-    
+
       audio.play().catch((error) => {
         console.error('❌ Audio playback error:', error.message);
       });
-    
+
       setOrders((prevOrders) => {
         const existingOrder = prevOrders.find((order) => order.id === newOrder.id);
         if (existingOrder) {
           console.log('⚠️ Буюртма аллақачон мавжуд, қайта қўшилмайди');
           return prevOrders;
         }
-    
+
         // Append new order to the end of the list
         const updatedOrders = [...prevOrders, newOrder];
         console.log('✅ Янги буюртма қўшилди, жами:', updatedOrders.length);
         return updatedOrders;
       });
     };
-    
+
     const handleOrderUpdated = (updatedOrder) => {
       console.log('🔄 Буюртма янгиланди:', updatedOrder);
       setLastUpdateTime(new Date());
-    
+
       if (!updatedOrder.orderItems) {
         console.log(`⚠️ Тўлиқ маълумот келмади, ID: ${updatedOrder.id}`);
         setOrders((prevOrders) =>
@@ -279,16 +281,16 @@ function KitchenPanel() {
         );
         return;
       }
-    
+
       setOrders((prevOrders) => {
         const orderExists = prevOrders.some((order) => order.id === updatedOrder.id);
-    
+
         if (!orderExists) {
           console.log('🆕 Янгиланган буюртма мавжуд эмас, қўшилмоқда:', updatedOrder.id);
           // Append updated order to the end if it doesn't exist
           return [...prevOrders, updatedOrder];
         }
-    
+
         return prevOrders.map((order) =>
           order.id === updatedOrder.id ? updatedOrder : order
         );
@@ -305,7 +307,7 @@ function KitchenPanel() {
     const handleOrderItemStatusUpdated = (updatedItem) => {
       console.log('📝 Итем статус янгиланди:', updatedItem);
       setLastUpdateTime(new Date());
-      
+
       if (updatedItem.status === 'PENDING') {
         audio.play().catch((error) => {
           console.error('❌ Audio playback error:', error.message);
@@ -325,7 +327,7 @@ function KitchenPanel() {
           ),
         }))
       );
-      
+
       setUpdatingItems((prev) => {
         const newSet = new Set(prev);
         newSet.delete(updatedItem.id);
@@ -336,7 +338,7 @@ function KitchenPanel() {
     const handleOrderItemDeleted = ({ id }) => {
       console.log(`🗑️ Итем ўчирилди:`, id);
       setLastUpdateTime(new Date());
-      
+
       setOrders((prevOrders) =>
         prevOrders.map((order) => ({
           ...order,
@@ -348,7 +350,7 @@ function KitchenPanel() {
     const handleOrderItemAdded = (newItem) => {
       console.log('➕ Янги махсулот қўшилди:', newItem);
       setLastUpdateTime(new Date());
-      
+
       audio.play().catch((error) => {
         console.error('❌ Audio playback error:', error.message);
       });
@@ -441,8 +443,8 @@ function KitchenPanel() {
         (item) =>
           ['PENDING', 'COOKING'].includes(item.status) &&
           item.product &&
-          (!selectedUsername || 
-           (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
+          (!selectedUsername ||
+            (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
       )
   );
 
@@ -463,8 +465,8 @@ function KitchenPanel() {
       case 'archive':
         navigate('/archive');
         break;
-      case 'logout':
-        navigate('/logout');
+      case 'maxsulotlar':
+        navigate('/maxsulotlar');
         break;
       default:
         break;
@@ -501,21 +503,28 @@ function KitchenPanel() {
     <div className="kitchen-panel">
 
       <header className="kitchen-header">
-        <div style={{display:'flex',gap:'35px',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap'}}>
-        <button 
-              className={`sidebar-item ${currentPage === 'home' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
-              onClick={() => handleMenuItemClick('home')}
-            >
-              <Home size={20} className="sidebar-icon" />
-              Бош саҳифа
-            </button>
-            <button 
-              className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
-              onClick={() => handleMenuItemClick('archive')}
-            >
-              <Archive size={20} className="sidebar-icon" />
-              Архив
-            </button>
+        <div style={{ display: 'flex', gap: '35px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            className={`sidebar-item ${currentPage === 'home' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
+            onClick={() => handleMenuItemClick('home')}
+          >
+            <Home size={20} className="sidebar-icon" />
+            Бош саҳифа
+          </button>
+          <button
+            className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
+            onClick={() => handleMenuItemClick('archive')}
+          >
+            <Archive size={20} className="sidebar-icon" />
+            Архив
+          </button>
+          <button
+            className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
+            onClick={() => handleMenuItemClick('maxsulotlar')}
+          >
+            <UtensilsCrossed size={20} className="sidebar-icon" />
+            Буюртмалар
+          </button>
           <div className="header-right">
             <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
               <div className="user-info">
@@ -525,8 +534,8 @@ function KitchenPanel() {
                 <span className="user-name">{localStorage.getItem('user') || 'Номаълум'}</span>
               </div>
             </div>
-            <select 
-              value={selectedUsername} 
+            <select
+              value={selectedUsername}
               onChange={(e) => setSelectedUsername(e.target.value)}
               className="filter-select"
             >
@@ -557,15 +566,15 @@ function KitchenPanel() {
             {visibleOrders.map((order) => {
               const orderInfo = getOrderType(order);
               const { roleText, displayName } = getUserDisplay(order.user);
-              
+
               return (
                 <div className="order-card" key={order.id}>
                   <div className="order-header">
                     <div className="order-single-line">
                       <orderInfo.icon size={16} />
                       <span>
-                        {orderInfo.type === 'dine_in' ? `${order.table.name} ${order.table.number}` : 
-                         orderInfo.type === 'delivery' ? `Доставка ${order.carrierNumber}` : 'Номаълум'}
+                        {orderInfo.type === 'dine_in' ? `${order.table.name} ${order.table.number}` :
+                          orderInfo.type === 'delivery' ? `Доставка ${order.carrierNumber}` : 'Номаълум'}
                       </span>
                       <span> </span>
                       <span> </span>
@@ -591,8 +600,8 @@ function KitchenPanel() {
                           ['PENDING', 'COOKING'].includes(item.status) &&
                           item.product &&
                           item.product.name &&
-                          (!selectedUsername || 
-                           (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
+                          (!selectedUsername ||
+                            (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
                       )
                       .map((item) => (
                         <div key={item.id} className="order-item">

@@ -4,6 +4,7 @@ import Menyu from './Kitchenpanel';
 import Logout from './pages/logout';
 import SignIn from './pages/SingIn';
 import Arxiv from './pages/Arxiv';
+import Maxsulotlar from './pages/Maxsulotlar';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -20,6 +21,7 @@ function App() {
         <Route path="/login" element={<SignIn />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/archive" element={<Arxiv />} />
+        <Route path="/maxsulotlar" element={<Maxsulotlar />} />
         <Route
           path="/kitchen"
           element={<Menyu />}
