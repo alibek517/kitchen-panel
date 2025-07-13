@@ -213,7 +213,7 @@ function OrderDisplay() {
             <span className="sidebar-icon"><Archive size={20} /></span> Архив
           </button>
           <button className={`sidebar-item ${currentPage === 'maxsulotlar' ? 'active' : ''}`} onClick={() => handleMenuItemClick('maxsulotlar')}>
-            <span className="sidebar-icon"><UtensilsCrossed size={20} /></span> Буюртмалар
+            <span className="sidebar-icon"><UtensilsCrossed size={20} /></span> Таомлар
           </button>
           <div style={{ display: 'flex', gap: '15px' }} className="mt-4">
             <select

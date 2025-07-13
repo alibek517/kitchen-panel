@@ -523,7 +523,7 @@ function KitchenPanel() {
             onClick={() => handleMenuItemClick('maxsulotlar')}
           >
             <UtensilsCrossed size={20} className="sidebar-icon" />
-            Буюртмалар
+            Таомлар
           </button>
           <div className="header-right">
             <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
@@ -624,6 +624,9 @@ function KitchenPanel() {
                                   Пиширилмоқда
                                 </>
                               )}
+                            </div>
+                            <div>
+                            {item.description || ' '}
                             </div>
                           </div>
 
