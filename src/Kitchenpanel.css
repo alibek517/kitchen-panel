@@ -340,23 +340,27 @@
   display: block;
 }
 
-/* Orders Grid */
 .orders-grid {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-/* Order Card */
 .order-card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s ease;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.order-card.delivery-order {
+  background-color: #0084ff; 
+}
+.order-card.delivery-order {
+  background-color: #0084ff !important;
+}
 .order-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);

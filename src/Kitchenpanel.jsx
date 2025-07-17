@@ -568,7 +568,7 @@ function KitchenPanel() {
               const { roleText, displayName } = getUserDisplay(order.user);
 
               return (
-                <div className="order-card" key={order.id}>
+                <div className={`order-card ${orderInfo.type === 'delivery' ? 'delivery-order' : ''}`} key={order.id}>
                   <div className="order-header">
                     <div className="order-single-line">
                       <orderInfo.icon size={16} />
