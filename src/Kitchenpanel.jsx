@@ -6,7 +6,6 @@ import {
   ChefHat,
   Home,
   Archive,
-  LogOut,
   Utensils,
   Clock,
   Play,
@@ -16,9 +15,11 @@ import {
   RefreshCw,
   User,
   UtensilsCrossed,
+  WifiOff,
 } from 'lucide-react';
 import './KitchenPanel.css';
-import notificationSound from './assets/synthesize.mp3';
+
+const audio = new Audio('/synthesize.mp3');
 
 function KitchenPanel() {
   const [orders, setOrders] = useState([]);
@@ -30,9 +31,95 @@ function KitchenPanel() {
   const [selectedUsername, setSelectedUsername] = useState('');
   const [kitchenUsers, setKitchenUsers] = useState([]);
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const navigate = useNavigate();
   const location = useLocation();
-  const audio = new Audio(notificationSound);
+
+  // Cache keys for localStorage
+  const CACHE_KEY = 'cached_orders';
+  const CACHE_TIMESTAMP_KEY = 'cached_orders_timestamp';
+  const PRODUCT_CACHE_KEY = 'cached_product_assignments';
+
+  // Load cached orders from localStorage
+  const loadCachedOrders = () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+      if (cached && timestamp) {
+        const parsedOrders = JSON.parse(cached);
+        console.log('📂 Loaded cached orders:', parsedOrders);
+        return { orders: parsedOrders, timestamp: new Date(timestamp) };
+      }
+    } catch (error) {
+      console.error('❌ Error loading cached orders:', error.message);
+    }
+    return { orders: [], timestamp: null };
+  };
+
+  // Save orders to localStorage
+  const saveOrdersToCache = (ordersToCache) => {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(ordersToCache));
+      localStorage.setItem(CACHE_TIMESTAMP_KEY, new Date().toISOString());
+      console.log('💾 Orders saved to cache:', ordersToCache.length);
+    } catch (error) {
+      console.error('❌ Error saving orders to cache:', error.message);
+    }
+  };
+
+  // Load cached product assignments from localStorage
+  const loadCachedProductAssignments = () => {
+    try {
+      const cached = localStorage.getItem(PRODUCT_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        console.log('📂 Loaded cached product assignments:', parsed);
+        return parsed;
+      }
+    } catch (error) {
+      console.error('❌ Error loading cached product assignments:', error.message);
+    }
+    return {};
+  };
+
+  // Save product assignments to localStorage
+  const saveProductAssignmentsToCache = (cache) => {
+    try {
+      localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(cache));
+      console.log('💾 Product assignments saved to cache:', Object.keys(cache).length);
+    } catch (error) {
+      console.error('❌ Error saving product assignments to cache:', error.message);
+    }
+  };
+
+  const fetchProductAssignedToId = async (productId, cache = {}) => {
+    if (cache[productId]) {
+      console.log(`📦 Cached product data for ID ${productId}:`, cache[productId]);
+      return cache[productId].assignedToId;
+    }
+
+    if (!navigator.onLine) {
+      const cachedAssignments = loadCachedProductAssignments();
+      if (cachedAssignments[productId]) {
+        console.log(`📴 Offline: Using cached product assignment for ID ${productId}`);
+        return cachedAssignments[productId].assignedToId;
+      }
+      console.log(`📴 Offline: No cached assignment for product ${productId}, returning null`);
+      return null;
+    }
+
+    try {
+      const response = await axios.get(`https://alikafecrm.uz/product/${productId}`);
+      const assignedToId = response.data.assignedToId?.toString();
+      cache[productId] = { assignedToId };
+      saveProductAssignmentsToCache({ ...cache, [productId]: { assignedToId } });
+      console.log(`📡 Fetched product ID ${productId}: assignedToId = ${assignedToId}`);
+      return assignedToId;
+    } catch (error) {
+      console.error(`❌ Error fetching product ${productId}:`, error.message);
+      return null;
+    }
+  };
 
   const SessionExpiredModal = ({ isOpen, onConfirm }) => {
     if (!isOpen) return null;
@@ -115,19 +202,19 @@ function KitchenPanel() {
       return {
         type: 'dine_in',
         display: `${order.table.name} ${order.table.number}`,
-        icon: Utensils
+        icon: Utensils,
       };
     } else if (order.carrierNumber) {
       return {
         type: 'delivery',
         display: order.carrierNumber,
-        icon: Car
+        icon: Car,
       };
     } else {
       return {
         type: 'unknown',
         display: 'Номаълум',
-        icon: HelpCircle
+        icon: HelpCircle,
       };
     }
   };
@@ -146,16 +233,21 @@ function KitchenPanel() {
         setIsLoading(true);
       }
       const res = await axios.get('https://alikafecrm.uz/order/kitchen');
-      console.log('📦 Буюртмалар юкланди:', res.data);
-      // Ensure only valid orders are set (e.g., with required fields)
-      const validOrders = res.data.filter(order => order.id && order.orderItems);
+      console.log('📦 Orders fetched:', res.data);
+      const validOrders = res.data.filter((order) => order.id && order.orderItems);
       setOrders(validOrders);
       setLastUpdateTime(new Date());
+      setIsOffline(false);
+      saveOrdersToCache(validOrders);
     } catch (error) {
-      console.error('❌ Буюртмаларни олишда хатолик:', error.message);
-      // Keep existing orders if fetch fails to prevent UI from breaking
-      setOrders((prevOrders) => prevOrders);
-      // Optionally, you could add a state to show an error message to the user
+      console.error('❌ Error fetching orders:', error.message);
+      setIsOffline(true);
+      const { orders: cachedOrders, timestamp } = loadCachedOrders();
+      if (cachedOrders.length > 0) {
+        setOrders(cachedOrders);
+        setLastUpdateTime(timestamp || new Date());
+        console.log('🔄 Using cached orders due to fetch failure');
+      }
     } finally {
       if (isInitialFetch) {
         setIsLoading(false);
@@ -167,10 +259,10 @@ function KitchenPanel() {
     try {
       const res = await axios.get('https://alikafecrm.uz/user');
       const kitchenUsers = res.data
-        .filter(user => user.role === 'KITCHEN')
-        .map(user => user.username)
+        .filter((user) => user.role === 'KITCHEN')
+        .map((user) => user.username)
         .sort();
-      console.log('👨‍🍳 Ошпазлар юкланди:', kitchenUsers);
+      console.log('👨‍🍳 Kitchen users fetched:', kitchenUsers);
       setKitchenUsers(kitchenUsers);
 
       const storedUser = localStorage.getItem('user');
@@ -179,8 +271,8 @@ function KitchenPanel() {
         console.log('🔄 Default username set to:', storedUser);
       }
     } catch (error) {
-      console.error('❌ Ошпазларни олишда хатолик:', error.message);
-      setKitchenUsers([]); // Set empty array on failure to avoid breaking UI
+      console.error('❌ Error fetching kitchen users:', error.message);
+      setKitchenUsers([]);
     }
   };
 
@@ -211,74 +303,146 @@ function KitchenPanel() {
   };
 
   const autoRefresh = async () => {
-    // Check session status before refreshing
     const isSessionValid = await checkSessionStatus();
     if (!isSessionValid) {
       console.log('🔴 Session expired, stopping auto-refresh');
       return;
     }
 
-    if (!socket.connected) {
-      console.log('🔄 Автоматик янгилаш: WebSocket узилган, маълумотлар янгиланмоқда...');
-      await fetchOrders(false); // Pass false to prevent loader
+    if (!socket.connected || isOffline) {
+      console.log('🔄 Auto-refresh: WebSocket disconnected or offline, fetching data...');
+      await fetchOrders(false);
     } else {
-      console.log('🔄 Автоматик янгилаш: WebSocket фаол, фақат вақт янгиланмоқда');
+      console.log('🔄 Auto-refresh: WebSocket active, updating timestamp...');
       setLastUpdateTime(new Date());
     }
   };
 
+  const playNotification = () => {
+    console.log('🔔 Playing notification sound...');
+    audio.play().catch((error) => {
+      console.error('❌ Notification audio error:', error.message);
+    });
+  };
+
   useEffect(() => {
-    fetchOrders(true); // Initial fetch with loader
+    console.log('🔍 localStorage userId:', localStorage.getItem('userId'));
+
+    // Load cached orders if offline
+    if (!navigator.onLine) {
+      const { orders: cachedOrders, timestamp } = loadCachedOrders();
+      if (cachedOrders.length > 0) {
+        setOrders(cachedOrders);
+        setLastUpdateTime(timestamp || new Date());
+        setIsOffline(true);
+        setIsLoading(false);
+      }
+    } else {
+      fetchOrders(true);
+    }
+
     fetchKitchenUsers();
     checkSessionStatus();
 
-    // Set auto-refresh to check session every 3 seconds
-    const autoRefreshInterval = setInterval(autoRefresh, 3000);
+    // Auto-refresh every 2 minutes
+    const autoRefreshInterval = setInterval(autoRefresh, 120000);
+
+    // Polling every 2 minutes when WebSocket is disconnected
+    const pollInterval = setInterval(() => {
+      if (!socket.connected) {
+        console.log('🔄 WebSocket disconnected, polling...');
+        fetchOrders(false);
+      }
+    }, 120000);
+
+    // Handle online/offline events
+    const handleOnline = () => {
+      setIsOffline(false);
+      fetchOrders(false);
+      console.log('🌐 Back online, fetching fresh data...');
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      const { orders: cachedOrders, timestamp } = loadCachedOrders();
+      if (cachedOrders.length > 0) {
+        setOrders(cachedOrders);
+        setLastUpdateTime(timestamp || new Date());
+        console.log('📴 Offline, loaded cached orders');
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     const handleConnect = () => {
-      console.log('🟢 Ошхона Панели: WebSocket уланди');
+      console.log('🟢 Kitchen Panel: WebSocket connected');
       setIsConnected(true);
       setLastUpdateTime(new Date());
     };
 
     const handleDisconnect = () => {
-      console.log('🔴 Ошхона Панели: WebSocket узилди');
+      console.log('🔴 Kitchen Panel: WebSocket disconnected');
       setIsConnected(false);
     };
 
-    const handleOrderCreated = (newOrder) => {
-      console.log('🆕 ЯНГИ буюртма келди:', newOrder);
+    const handleOrderCreated = async (newOrder) => {
+      console.log('🆕 New order received:', newOrder);
       setLastUpdateTime(new Date());
 
-      audio.play().catch((error) => {
-        console.error('❌ Audio playback error:', error.message);
-      });
+      const currentUserId = localStorage.getItem('userId');
+      console.log('🔍 Current userId:', currentUserId);
+
+      const productCache = loadCachedProductAssignments();
+
+      const hasAssignedOrder = await Promise.all(
+        newOrder.orderItems.map(async (item) => {
+          if (item.status !== 'PENDING' || !item.product || !item.product.id) {
+            return false;
+          }
+          const assignedToId = await fetchProductAssignedToId(item.product.id, productCache);
+          return assignedToId === currentUserId;
+        })
+      ).then((results) => results.some((result) => result));
+
+      if (hasAssignedOrder) {
+        console.log('🔔 Playing sound: Matching order found');
+        try {
+          await audio.play();
+          console.log('✅ Audio played successfully');
+        } catch (error) {
+          console.error('❌ Audio playback error:', error.message);
+        }
+      } else {
+        console.log('⚠️ No matching order found');
+      }
 
       setOrders((prevOrders) => {
         const existingOrder = prevOrders.find((order) => order.id === newOrder.id);
         if (existingOrder) {
-          console.log('⚠️ Буюртма аллақачон мавжуд, қайта қўшилмайди');
+          console.log('⚠️ Order already exists, not adding');
           return prevOrders;
         }
 
-        // Append new order to the end of the list
         const updatedOrders = [...prevOrders, newOrder];
-        console.log('✅ Янги буюртма қўшилди, жами:', updatedOrders.length);
+        console.log('✅ New order added, total:', updatedOrders.length);
+        saveOrdersToCache(updatedOrders);
         return updatedOrders;
       });
     };
 
     const handleOrderUpdated = (updatedOrder) => {
-      console.log('🔄 Буюртма янгиланди:', updatedOrder);
+      console.log('🔄 Order updated:', updatedOrder);
       setLastUpdateTime(new Date());
 
       if (!updatedOrder.orderItems) {
-        console.log(`⚠️ Тўлиқ маълумот келмади, ID: ${updatedOrder.id}`);
+        console.log(`⚠️ Incomplete data received, ID: ${updatedOrder.id}`);
         setOrders((prevOrders) =>
           prevOrders.map((order) =>
             order.id === updatedOrder.id ? { ...order, ...updatedOrder } : order
           )
         );
+        saveOrdersToCache(orders);
         return;
       }
 
@@ -286,47 +450,69 @@ function KitchenPanel() {
         const orderExists = prevOrders.some((order) => order.id === updatedOrder.id);
 
         if (!orderExists) {
-          console.log('🆕 Янгиланган буюртма мавжуд эмас, қўшилмоқда:', updatedOrder.id);
-          // Append updated order to the end if it doesn't exist
-          return [...prevOrders, updatedOrder];
+          console.log('🆕 Updated order not found, adding:', updatedOrder.id);
+          const updatedOrders = [...prevOrders, updatedOrder];
+          saveOrdersToCache(updatedOrders);
+          return updatedOrders;
         }
 
-        return prevOrders.map((order) =>
+        const updatedOrders = prevOrders.map((order) =>
           order.id === updatedOrder.id ? updatedOrder : order
         );
+        saveOrdersToCache(updatedOrders);
+        return updatedOrders;
       });
     };
 
-
     const handleOrderDeleted = ({ id }) => {
-      console.log(`🗑️ Буюртма ўчирилди:`, id);
+      console.log(`🗑️ Order deleted:`, id);
       setLastUpdateTime(new Date());
-      setOrders((prevOrders) => prevOrders.filter((order) => order.id !== id));
+      setOrders((prevOrders) => {
+        const updatedOrders = prevOrders.filter((order) => order.id !== id);
+        saveOrdersToCache(updatedOrders);
+        return updatedOrders;
+      });
     };
 
-    const handleOrderItemStatusUpdated = (updatedItem) => {
-      console.log('📝 Итем статус янгиланди:', updatedItem);
+    const handleOrderItemStatusUpdated = async (updatedItem) => {
+      console.log('📝 Item status updated:', updatedItem);
       setLastUpdateTime(new Date());
 
-      if (updatedItem.status === 'PENDING') {
-        audio.play().catch((error) => {
-          console.error('❌ Audio playback error:', error.message);
-        });
+      const currentUserId = localStorage.getItem('userId');
+      const productCache = loadCachedProductAssignments();
+
+      if (['PENDING', 'COOKING', 'READY'].includes(updatedItem.status) && updatedItem.product && updatedItem.product.id) {
+        const assignedToId = await fetchProductAssignedToId(updatedItem.product.id, productCache);
+        if (assignedToId === currentUserId) {
+          console.log(`🔔 Playing sound: Status changed to ${updatedItem.status} for matching product`);
+          try {
+            await audio.play();
+            console.log('✅ Audio played successfully');
+          } catch (error) {
+            console.error('❌ Audio playback error:', error.message);
+          }
+        } else {
+          console.log('⚠️ No matching product found or user not assigned');
+        }
+      } else {
+        console.log('⚠️ Invalid item: Status not relevant or no product ID');
       }
 
       if (!updatedItem.product || !updatedItem.product.name) {
-        console.log(`⚠️ Продукт маълумоти йўқ`);
+        console.log(`⚠️ No product information`);
         return;
       }
 
-      setOrders((prevOrders) =>
-        prevOrders.map((order) => ({
+      setOrders((prevOrders) => {
+        const updatedOrders = prevOrders.map((order) => ({
           ...order,
           orderItems: order.orderItems.map((item) =>
             item.id === updatedItem.id ? { ...item, ...updatedItem } : item
           ),
-        }))
-      );
+        }));
+        saveOrdersToCache(updatedOrders);
+        return updatedOrders;
+      });
 
       setUpdatingItems((prev) => {
         const newSet = new Set(prev);
@@ -336,39 +522,61 @@ function KitchenPanel() {
     };
 
     const handleOrderItemDeleted = ({ id }) => {
-      console.log(`🗑️ Итем ўчирилди:`, id);
+      console.log(`🗑️ Item deleted:`, id);
       setLastUpdateTime(new Date());
 
-      setOrders((prevOrders) =>
-        prevOrders.map((order) => ({
+      setOrders((prevOrders) => {
+        const updatedOrders = prevOrders.map((order) => ({
           ...order,
           orderItems: order.orderItems.filter((item) => item.id !== id),
-        }))
-      );
+        }));
+        saveOrdersToCache(updatedOrders);
+        return updatedOrders;
+      });
     };
 
-    const handleOrderItemAdded = (newItem) => {
-      console.log('➕ Янги махсулот қўшилди:', newItem);
+    const handleOrderItemAdded = async (newItem) => {
+      console.log('➕ New item added:', newItem);
       setLastUpdateTime(new Date());
 
-      audio.play().catch((error) => {
-        console.error('❌ Audio playback error:', error.message);
-      });
+      const currentUserId = localStorage.getItem('userId');
+      console.log('🔍 Current userId:', currentUserId, 'ProductId:', newItem.product?.id || 'N/A');
 
-      setOrders((prevOrders) =>
-        prevOrders.map((order) => {
+      const productCache = loadCachedProductAssignments();
+
+      if (newItem.status === 'PENDING' && newItem.product && newItem.product.id) {
+        const assignedToId = await fetchProductAssignedToId(newItem.product.id, productCache);
+        if (assignedToId === currentUserId) {
+          console.log('🔔 Playing sound: Matching product found');
+          try {
+            await audio.play();
+            console.log('✅ Audio played successfully');
+          } catch (error) {
+            console.error('❌ Audio playback error:', error.message);
+          }
+        } else {
+          console.log('⚠️ No matching product found or user not assigned');
+        }
+      } else {
+        console.log('⚠️ Invalid item: Status not PENDING or no product ID');
+      }
+
+      setOrders((prevOrders) => {
+        const updatedOrders = prevOrders.map((order) => {
           if (order.id === newItem.orderId) {
-            const itemExists = order.orderItems.some(item => item.id === newItem.id);
+            const itemExists = order.orderItems.some((item) => item.id === newItem.id);
             if (!itemExists) {
               return {
                 ...order,
-                orderItems: [...order.orderItems, newItem]
+                orderItems: [...order.orderItems, newItem],
               };
             }
           }
           return order;
-        })
-      );
+        });
+        saveOrdersToCache(updatedOrders);
+        return updatedOrders;
+      });
     };
 
     socket.on('connect', handleConnect);
@@ -379,18 +587,10 @@ function KitchenPanel() {
     socket.on('orderItemStatusUpdated', handleOrderItemStatusUpdated);
     socket.on('orderItemDeleted', handleOrderItemDeleted);
     socket.on('orderItemAdded', handleOrderItemAdded);
-
     socket.on('reconnect', () => {
-      console.log('🔄 WebSocket qayta ulandi, ma\'lumotlar yangilanmoqda...');
-      fetchOrders(false); // Pass false to prevent loader on reconnect
+      console.log('🔄 WebSocket reconnected, refreshing data...');
+      fetchOrders(false);
     });
-
-    const pollInterval = setInterval(() => {
-      if (!socket.connected) {
-        console.log('🔄 WebSocket узилган, polling ишлатилмоқда...');
-        fetchOrders(false); // Pass false to prevent loader during polling
-      }
-    }, 60000);
 
     return () => {
       socket.off('connect', handleConnect);
@@ -404,16 +604,18 @@ function KitchenPanel() {
       socket.off('reconnect');
       clearInterval(pollInterval);
       clearInterval(autoRefreshInterval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
   const updateOrderItemStatus = async (itemId, status) => {
     try {
-      console.log(`🔄 Итем ${itemId} Status ${status}га ўзгартирилмоқда...`);
+      console.log(`🔄 Updating item ${itemId} to status ${status}...`);
       setUpdatingItems((prev) => new Set(prev).add(itemId));
       socket.emit('update_order_item_status', { itemId, status });
     } catch (error) {
-      console.error('❌ Статус янгилaшда хатолик:', error.message);
+      console.error('❌ Error updating status:', error.message);
       setUpdatingItems((prev) => {
         const newSet = new Set(prev);
         newSet.delete(itemId);
@@ -484,24 +686,23 @@ function KitchenPanel() {
       case 'CASHIER':
         return {
           roleText: 'Официант',
-          displayName: user.name || 'Номаълум'
+          displayName: user.name || 'Номаълум',
         };
       case 'CUSTOMER':
         return {
           roleText: 'Админ',
-          displayName: 'Админ'
+          displayName: 'Админ',
         };
       default:
         return {
           roleText: user.role || 'Номаълум',
-          displayName: user.name || 'Номаълум'
+          displayName: user.name || 'Номаълум',
         };
     }
   };
 
   return (
     <div className="kitchen-panel">
-
       <header className="kitchen-header">
         <div style={{ display: 'flex', gap: '35px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
@@ -519,7 +720,7 @@ function KitchenPanel() {
             Архив
           </button>
           <button
-            className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
+            className={`sidebar-item ${currentPage === 'maxsulotlar' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
             onClick={() => handleMenuItemClick('maxsulotlar')}
           >
             <UtensilsCrossed size={20} className="sidebar-icon" />
@@ -548,6 +749,12 @@ function KitchenPanel() {
             </select>
           </div>
         </div>
+        {isOffline && (
+          <div className="offline-indicator">
+            <WifiOff size={16} style={{ marginRight: '8px' }} />
+            Офлайн режим: Маълумотлар {formatTime(lastUpdateTime)} юкланган
+          </div>
+        )}
       </header>
 
       <div className="main-content">
@@ -577,18 +784,10 @@ function KitchenPanel() {
                           orderInfo.type === 'delivery' ? `Доставка ${order.carrierNumber}` : 'Номаълум'}
                       </span>
                       <span> </span>
-                      <span> </span>
                       <Clock size={14} />
                       <span>{formatTime(order.createdAt)}</span>
                       <span> </span>
                       <span> </span>
-                      <span> </span>
-                      <span> </span>
-                      <span> </span>
-                      <span> </span>
-                      <span> </span>
-                      {order.status === 'PENDING' ? <Clock size={14} /> : <ChefHat size={14} />}
-                      <span>{order.status === 'PENDING' ? 'Кутилмоқда' : 'Пиширилмоқда'}</span>
                       <span><User size={14} />{roleText}: {displayName}</span>
                     </div>
                   </div>
@@ -608,9 +807,12 @@ function KitchenPanel() {
                           <div className="item-details">
                             <div className="item-header">
                               <span className="item-count"><b>{item.count} дона</b></span>
-                              <span className="item-name">
+
+                              <span>
                                 {item.product.name || 'Маҳсулот номи юкланмоқда...'}
                               </span>
+                              <span style={{fontSize:'20px'}}>{formatTime(item.createdAt)}</span>
+
                             </div>
                             <div className={`item-status status-${item.status.toLowerCase()}`}>
                               {item.status === 'PENDING' ? (
@@ -626,7 +828,7 @@ function KitchenPanel() {
                               )}
                             </div>
                             <div>
-                            {item.description || ' '}
+                              {item.description || ' '}
                             </div>
                           </div>
 
