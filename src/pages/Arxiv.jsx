@@ -25,7 +25,7 @@ function OrderDisplay() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('https://alikafecrm.uz/order');
+        const response = await fetch('http://192.168.100.99:3000/order');
         const data = await response.json();
         setOrders(data);
 

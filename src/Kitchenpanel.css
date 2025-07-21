@@ -761,3 +761,82 @@
 li{
   list-style: none;
 }
+.skeleton {
+  background: #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.skeleton-header {
+  height: 40px;
+  width: 100%;
+}
+
+.skeleton-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  margin-bottom: 10px;
+}
+
+.skeleton-text {
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+.skeleton-line {
+  height: 20px;
+  width: 80%;
+  margin: 10px;
+}
+
+.skeleton-count {
+  height: 20px;
+  width: 60px;
+}
+
+.skeleton-name {
+  height: 20px;
+  width: 120px;
+}
+
+.skeleton-time {
+  height: 20px;
+  width: 80px;
+}
+
+.skeleton-status {
+  height: 16px;
+  width: 100px;
+  margin-top: 5px;
+}
+
+.skeleton-button {
+  height: 40px;
+  width: 120px;
+  border-radius: 8px;
+}
+
+.offline-indicator {
+  color: #ff4d4f;
+  font-size: 14px;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+}

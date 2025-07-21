@@ -24,7 +24,7 @@ const SignIn = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
        // First check auth status
-       const authRes = await fetch('https://alikafecrm.uz/auth-check/1');
+       const authRes = await fetch('http://192.168.100.99:3000/auth-check/1');
        if (!authRes.ok) throw new Error('Auth tekshirishda xatolik');
        
        const authData = await authRes.json();
@@ -39,7 +39,7 @@ const SignIn = () => {
        }
 
       // Simulate API call delay for loading state
-      const res = await fetch('https://alikafecrm.uz/user');
+      const res = await fetch('http://192.168.100.99:3000/user');
       if (!res.ok) throw new Error('Сервердан маълумот олишда хатолик');
 
       const users = await res.json();

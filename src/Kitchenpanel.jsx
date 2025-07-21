@@ -85,11 +85,8 @@ function KitchenPanel() {
   // Save product assignments to localStorage
   const saveProductAssignmentsToCache = (cache) => {
     try {
-      const validCache = Object.fromEntries(
-        Object.entries(cache).filter(([_, value]) => value && typeof value.isCompleted === 'boolean')
-      );
-      localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(validCache));
-      console.log('💾 Product assignments saved to cache:', Object.keys(validCache).length);
+      localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(cache));
+      console.log('💾 Product assignments saved to cache:', Object.keys(cache).length);
     } catch (error) {
       console.error('❌ Error saving product assignments to cache:', error.message);
     }
@@ -98,31 +95,29 @@ function KitchenPanel() {
   const fetchProductAssignedToId = async (productId, cache = {}) => {
     if (cache[productId]) {
       console.log(`📦 Cached product data for ID ${productId}:`, cache[productId]);
-      return cache[productId];
+      return cache[productId].assignedToId;
     }
 
     if (!navigator.onLine) {
       const cachedAssignments = loadCachedProductAssignments();
       if (cachedAssignments[productId]) {
         console.log(`📴 Offline: Using cached product assignment for ID ${productId}`);
-        return cachedAssignments[productId];
+        return cachedAssignments[productId].assignedToId;
       }
       console.log(`📴 Offline: No cached assignment for product ${productId}, returning null`);
-      return { assignedToId: null, isCompleted: false };
+      return null;
     }
 
     try {
-      const response = await axios.get(`https://alikafecrm.uz/product/${productId}`);
-      console.log(`📡 Raw API response for product ${productId}:`, response.data);
-      const { assignedToId, isCompleted } = response.data;
-      const productData = { assignedToId: assignedToId?.toString(), isCompleted: !!isCompleted };
-      cache[productId] = productData;
-      saveProductAssignmentsToCache({ ...cache, [productId]: productData });
-      console.log(`📡 Fetched product ID ${productId}:`, productData);
-      return productData;
+      const response = await axios.get(`http://192.168.100.99:3000/product/${productId}`);
+      const assignedToId = response.data.assignedToId?.toString();
+      cache[productId] = { assignedToId };
+      saveProductAssignmentsToCache({ ...cache, [productId]: { assignedToId } });
+      console.log(`📡 Fetched product ID ${productId}: assignedToId = ${assignedToId}`);
+      return assignedToId;
     } catch (error) {
       console.error(`❌ Error fetching product ${productId}:`, error.message);
-      return { assignedToId: null, isCompleted: false };
+      return null;
     }
   };
 
@@ -237,7 +232,7 @@ function KitchenPanel() {
       if (isInitialFetch) {
         setIsLoading(true);
       }
-      const res = await axios.get('https://alikafecrm.uz/order/kitchen');
+      const res = await axios.get('http://192.168.100.99:3000/order/kitchen');
       console.log('📦 Orders fetched:', res.data);
       const validOrders = res.data.filter((order) => order.id && order.orderItems);
       setOrders(validOrders);
@@ -262,7 +257,7 @@ function KitchenPanel() {
 
   const fetchKitchenUsers = async () => {
     try {
-      const res = await axios.get('https://alikafecrm.uz/user');
+      const res = await axios.get('http://192.168.100.99:3000/user');
       const kitchenUsers = res.data
         .filter((user) => user.role === 'KITCHEN')
         .map((user) => user.username)
@@ -283,7 +278,7 @@ function KitchenPanel() {
 
   const checkSessionStatus = async () => {
     try {
-      const response = await axios.get('https://alikafecrm.uz/auth-check/1', {
+      const response = await axios.get('http://192.168.100.99:3000/auth-check/1', {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -306,16 +301,6 @@ function KitchenPanel() {
     localStorage.removeItem('userId');
     navigate('/login');
   };
-
-  const handleRefresh = async () => {
-    setIsLoading(true);
-    await Promise.all([fetchOrders(true), fetchKitchenUsers(),handleConnect()]);
-  };
-  function startRefreshTimer() {
-    setInterval(handleRefresh, 120000);
-}
-
-startRefreshTimer()
 
   const autoRefresh = async () => {
     const isSessionValid = await checkSessionStatus();
@@ -340,74 +325,6 @@ startRefreshTimer()
     });
   };
 
-  // Helper function to update order status to READY
-  const updateOrderStatusToReady = (orderId) => {
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) {
-      console.log(`⚠️ Order ${orderId} not found for status update`);
-      return;
-    }
-
-    if (order.status !== 'READY') {
-      console.log(`🔄 Updating order ${orderId} to READY`);
-      socket.emit('update_order_status', { orderId, status: 'READY' });
-    } else {
-      console.log(`⚠️ Order ${orderId} already READY`);
-    }
-  };
-
-  // Automatically process items with isCompleted: true and update order status
-  useEffect(() => {
-    const processCompletedItems = async () => {
-      if (isOffline || isLoading || showSessionExpiredModal) {
-        console.log('⏸️ Skipping processCompletedItems: offline, loading, or session expired');
-        return;
-      }
-
-      const productCache = loadCachedProductAssignments();
-      const currentUserId = localStorage.getItem('userId');
-      console.log('🔍 Processing completed items for userId:', currentUserId);
-
-      for (const order of orders) {
-        let shouldUpdateOrder = true; // Flag to determine if order should be set to READY
-
-        for (const item of order.orderItems) {
-          if (
-            ['PENDING', 'COOKING'].includes(item.status) &&
-            item.product?.id &&
-            !updatingItems.has(item.id)
-          ) {
-            console.log(`🔎 Checking item ${item.id} (status: ${item.status}, productId: ${item.product.id})`);
-            const { isCompleted, assignedToId } = await fetchProductAssignedToId(item.product.id, productCache);
-            console.log(`🔍 Product ${item.product.id} - isCompleted: ${isCompleted}, assignedToId: ${assignedToId}`);
-
-            if (isCompleted && assignedToId === currentUserId) {
-              console.log(`🔄 Auto-processing item ${item.id} with isCompleted: true to READY`);
-              setUpdatingItems((prev) => new Set(prev).add(item.id));
-              socket.emit('update_order_item_status', { itemId: item.id, status: 'READY' });
-              await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
-            } else {
-              console.log(`⚠️ Item ${item.id} not processed: isCompleted=${isCompleted}, assignedToId=${assignedToId}, currentUserId=${currentUserId}`);
-              if (!isCompleted || item.status !== 'READY') {
-                shouldUpdateOrder = false; // Non-completed or non-READY items prevent order from being READY
-              }
-            }
-          } else if (item.status !== 'READY') {
-            console.log(`⚠️ Skipping item ${item.id}: Invalid status (${item.status}) or missing product ID`);
-            shouldUpdateOrder = false; // Non-READY items prevent order from being READY
-          }
-        }
-
-        // Update order status to READY if all items are processed or already READY
-        if (shouldUpdateOrder && ['PENDING', 'COOKING'].includes(order.status)) {
-          updateOrderStatusToReady(order.id);
-        }
-      }
-    };
-
-    processCompletedItems();
-  }, [orders, isOffline, isLoading, showSessionExpiredModal]);
-
   useEffect(() => {
     console.log('🔍 localStorage userId:', localStorage.getItem('userId'));
 
@@ -427,9 +344,10 @@ startRefreshTimer()
     fetchKitchenUsers();
     checkSessionStatus();
 
+    // Auto-refresh every 2 minutes
     const autoRefreshInterval = setInterval(autoRefresh, 120000);
 
-
+    // Polling every 2 minutes when WebSocket is disconnected
     const pollInterval = setInterval(() => {
       if (!socket.connected) {
         console.log('🔄 WebSocket disconnected, polling...');
@@ -437,6 +355,7 @@ startRefreshTimer()
       }
     }, 120000);
 
+    // Handle online/offline events
     const handleOnline = () => {
       setIsOffline(false);
       fetchOrders(false);
@@ -457,6 +376,7 @@ startRefreshTimer()
     window.addEventListener('offline', handleOffline);
 
     const handleConnect = () => {
+      console.log('🟢 Kitchen Panel: WebSocket connected');
       setIsConnected(true);
       setLastUpdateTime(new Date());
     };
@@ -474,32 +394,16 @@ startRefreshTimer()
       console.log('🔍 Current userId:', currentUserId);
 
       const productCache = loadCachedProductAssignments();
-      let shouldUpdateOrder = true; // Flag to determine if order should be set to READY
 
       const hasAssignedOrder = await Promise.all(
         newOrder.orderItems.map(async (item) => {
           if (item.status !== 'PENDING' || !item.product || !item.product.id) {
-            shouldUpdateOrder = false;
             return false;
           }
-          const { assignedToId, isCompleted } = await fetchProductAssignedToId(item.product.id, productCache);
-          if (isCompleted && assignedToId === currentUserId) {
-            console.log(`🔄 Auto-processing new item ${item.id} with isCompleted: true to READY`);
-            setUpdatingItems((prev) => new Set(prev).add(item.id));
-            socket.emit('update_order_item_status', { itemId: item.id, status: 'READY' });
-            await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
-            return true;
-          }
-          if (!isCompleted) {
-            shouldUpdateOrder = false; // Non-completed item prevents order from being READY
-          }
+          const assignedToId = await fetchProductAssignedToId(item.product.id, productCache);
           return assignedToId === currentUserId;
         })
       ).then((results) => results.some((result) => result));
-
-      if (shouldUpdateOrder) {
-        updateOrderStatusToReady(newOrder.id);
-      }
 
       if (hasAssignedOrder) {
         console.log('🔔 Playing sound: Matching order found');
@@ -509,6 +413,8 @@ startRefreshTimer()
         } catch (error) {
           console.error('❌ Audio playback error:', error.message);
         }
+      } else {
+        console.log('⚠️ No matching order found');
       }
 
       setOrders((prevOrders) => {
@@ -575,11 +481,10 @@ startRefreshTimer()
       const currentUserId = localStorage.getItem('userId');
       const productCache = loadCachedProductAssignments();
 
-      // Only play sound for automatic updates or new items, not manual clicks
       if (['PENDING', 'COOKING', 'READY'].includes(updatedItem.status) && updatedItem.product && updatedItem.product.id) {
-        const { assignedToId, isCompleted } = await fetchProductAssignedToId(updatedItem.product.id, productCache);
-        if (assignedToId === currentUserId && isCompleted) {
-          console.log(`🔔 Playing sound: Status changed to ${updatedItem.status} for matching product (auto)`);
+        const assignedToId = await fetchProductAssignedToId(updatedItem.product.id, productCache);
+        if (assignedToId === currentUserId) {
+          console.log(`🔔 Playing sound: Status changed to ${updatedItem.status} for matching product`);
           try {
             await audio.play();
             console.log('✅ Audio played successfully');
@@ -587,7 +492,7 @@ startRefreshTimer()
             console.error('❌ Audio playback error:', error.message);
           }
         } else {
-          console.log('⚠️ No sound played: Manual update or user not assigned');
+          console.log('⚠️ No matching product found or user not assigned');
         }
       } else {
         console.log('⚠️ Invalid item: Status not relevant or no product ID');
@@ -614,15 +519,6 @@ startRefreshTimer()
         newSet.delete(updatedItem.id);
         return newSet;
       });
-
-      // Check if order should be updated to READY
-      const order = orders.find((o) => o.id === updatedItem.orderId);
-      if (order && updatedItem.status === 'READY') {
-        const allItemsReady = order.orderItems.every((item) => item.status === 'READY');
-        if (allItemsReady) {
-          updateOrderStatusToReady(updatedItem.orderId);
-        }
-      }
     };
 
     const handleOrderItemDeleted = ({ id }) => {
@@ -649,29 +545,8 @@ startRefreshTimer()
       const productCache = loadCachedProductAssignments();
 
       if (newItem.status === 'PENDING' && newItem.product && newItem.product.id) {
-        const { assignedToId, isCompleted } = await fetchProductAssignedToId(newItem.product.id, productCache);
-        if (isCompleted && assignedToId === currentUserId) {
-          console.log(`🔄 Auto-processing new item ${newItem.id} with isCompleted: true to READY`);
-          setUpdatingItems((prev) => new Set(prev).add(newItem.id));
-          socket.emit('update_order_item_status', { itemId: newItem.id, status: 'READY' });
-          await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
-          // Check if all items in the order are READY or completed
-          const order = orders.find((o) => o.id === newItem.orderId) || { orderItems: [] };
-          const allItems = [...order.orderItems, newItem];
-          const allItemsReadyOrCompleted = await Promise.all(
-            allItems.map(async (item) => {
-              if (item.status === 'READY') return true;
-              if (item.product?.id) {
-                const { isCompleted: itemCompleted } = await fetchProductAssignedToId(item.product.id, productCache);
-                return itemCompleted;
-              }
-              return false;
-            })
-          );
-          if (allItemsReadyOrCompleted.every((ready) => ready)) {
-            updateOrderStatusToReady(newItem.orderId);
-          }
-        } else if (assignedToId === currentUserId) {
+        const assignedToId = await fetchProductAssignedToId(newItem.product.id, productCache);
+        if (assignedToId === currentUserId) {
           console.log('🔔 Playing sound: Matching product found');
           try {
             await audio.play();
@@ -679,6 +554,8 @@ startRefreshTimer()
           } catch (error) {
             console.error('❌ Audio playback error:', error.message);
           }
+        } else {
+          console.log('⚠️ No matching product found or user not assigned');
         }
       } else {
         console.log('⚠️ Invalid item: Status not PENDING or no product ID');
@@ -773,7 +650,7 @@ startRefreshTimer()
             (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
       )
   )
-  .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)); // Sort oldest first
+  .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -874,6 +751,12 @@ startRefreshTimer()
             </select>
           </div>
         </div>
+        {isOffline && (
+          <div className="offline-indicator">
+            <WifiOff size={16} style={{ marginRight: '8px' }} />
+            Офлайн режим: Маълумотлар {formatTime(lastUpdateTime)} юкланган
+          </div>
+        )}
       </header>
 
       <div className="main-content">
@@ -926,8 +809,12 @@ startRefreshTimer()
                           <div className="item-details">
                             <div className="item-header">
                               <span className="item-count"><b>{item.count} дона</b></span>
-                              <span>{item.product.name || 'Маҳсулот номи юкланмоқда...'}</span>
-                              <span style={{ fontSize: '20px' }}>{formatTime(item.createdAt)}</span>
+
+                              <span>
+                                {item.product.name || 'Маҳсулот номи юкланмоқда...'}
+                              </span>
+                              <span style={{fontSize:'20px'}}>{formatTime(item.createdAt)}</span>
+
                             </div>
                             <div className={`item-status status-${item.status.toLowerCase()}`}>
                               {item.status === 'PENDING' ? (
@@ -942,7 +829,9 @@ startRefreshTimer()
                                 </>
                               )}
                             </div>
-                            <div>{item.description || ' '}</div>
+                            <div>
+                              {item.description || ' '}
+                            </div>
                           </div>
 
                           <div className="item-actions">

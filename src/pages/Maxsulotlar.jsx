@@ -113,7 +113,7 @@ function Maxsulotlar() {
     const fetchOrders = async (isInitialFetch = false) => {
         try {
             if (isInitialFetch) setIsLoading(true);
-            const res = await axios.get('https://alikafecrm.uz/order/kitchen');
+            const res = await axios.get('http://192.168.100.99:3000/order/kitchen');
             console.log('📦 Буюртмалар юкланди:', res.data);
             const validOrders = res.data.filter(order => order.id && order.orderItems);
             setOrders(validOrders);
@@ -129,7 +129,7 @@ function Maxsulotlar() {
     const fetchProducts = async () => {
         try {
             setIsLoading(true);
-            const res = await axios.get('https://alikafecrm.uz/product/');
+            const res = await axios.get('http://192.168.100.99:3000/product/');
             console.log('🍽️ Махсулотлар юкланди:', res.data);
             const validProducts = res.data.filter(product => product.id && typeof product.isFinished === 'boolean');
             setProducts(validProducts);
@@ -146,7 +146,7 @@ function Maxsulotlar() {
             setUpdatingItems((prev) => new Set(prev).add(productId));
             const newStatus = !currentStatus;
             const response = await axios.put(
-                `https://alikafecrm.uz/product/${productId}`,
+                `http://192.168.100.99:3000/product/${productId}`,
                 { isFinished: newStatus },
                 {
                     headers: {
@@ -175,7 +175,7 @@ function Maxsulotlar() {
 
     const fetchKitchenUsers = async () => {
         try {
-            const res = await axios.get('https://alikafecrm.uz/user');
+            const res = await axios.get('http://192.168.100.99:3000/user');
             const kitchenUsers = res.data
                 .filter(user => user.role === 'KITCHEN')
                 .map(user => user.username)
@@ -195,7 +195,7 @@ function Maxsulotlar() {
 
     const checkSessionStatus = async () => {
         try {
-            const response = await axios.get('https://alikafecrm.uz/auth-check/1', {
+            const response = await axios.get('http://192.168.100.99:3000/auth-check/1', {
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${localStorage.getItem('token')}`,

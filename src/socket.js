@@ -1,6 +1,6 @@
 import io from 'socket.io-client';
 
-const socket = io('https://alikafecrm.uz', {
+const socket = io('http://192.168.100.99:3000', {
   path: '/socket.io',
   transports: ['websocket'],
   reconnection: true,
