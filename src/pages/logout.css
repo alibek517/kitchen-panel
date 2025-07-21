@@ -8,7 +8,6 @@
   --border-light: #e5e7eb;
 }
 
-/* === Page Layout === */
 .logout-page {
   background-color: #f0f0f0;
   width: 100vw;
@@ -18,7 +17,6 @@
   align-items: center;
 }
 
-/* === Container === */
 .logout-container {
   background: linear-gradient(145deg, #fff, #f8fafc);
   padding: 48px;
