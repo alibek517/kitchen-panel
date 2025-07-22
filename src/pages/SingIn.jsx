@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, User, Lock, Coffee, Sparkles } from 'lucide-react';
+import log from "/elipps lofo Ai-01.png"
 
 const SignIn = () => {
   const [username, setUsername] = useState('');
@@ -96,12 +97,10 @@ const SignIn = () => {
 
   return (
     <div className="signin-container">
-      {/* Animated background elements */}
       <div className="bg-element-1"></div>
       <div className="bg-element-2"></div>
       <div className="bg-element-3"></div>
 
-      {/* Floating particles */}
       <div className="particles-container">
         {[...Array(20)].map((_, i) => (
           <div key={i} className="particle" style={{
@@ -113,11 +112,8 @@ const SignIn = () => {
       </div>
 
       <div className="signin-card">
-        {/* Header */}
         <div className="signin-header">
-          <div className="logo-container">
-            <Coffee className="logo-icon" />
-          </div>
+        <img style={{height:'80px'}} src={`${log}`} alt="" />
           <h1 className="kirish">Ошпаз Панели</h1>
           <p className="subtitle">
             <Sparkles className="subtitle-icon" />
