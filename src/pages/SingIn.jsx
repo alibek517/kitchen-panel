@@ -241,18 +241,7 @@ const SignIn = () => {
           
         }
 
-        /* Animated Background Elements */
-        .bg-element-1,
-        .bg-element-2,
-        .bg-element-3 {
-          position: absolute;
-          width: 20rem;
-          height: 20rem;
-          border-radius: 50%;
-          mix-blend-mode: multiply;
-          filter: blur(4rem);
-          animation: pulse 3s ease-in-out infinite;
-        }
+
 
         .bg-element-1 {
           top: -10rem;
@@ -264,7 +253,6 @@ const SignIn = () => {
           bottom: -10rem;
           left: -10rem;
           background: #ffa500;
-          animation-delay: 1s;
         }
 
         .bg-element-3 {
@@ -272,7 +260,6 @@ const SignIn = () => {
           left: 50%;
           transform: translate(-50%, -50%);
           background: #cd853f;
-          animation-delay: 0.5s;
         }
 
         /* Floating Particles */
@@ -282,18 +269,9 @@ const SignIn = () => {
           height: 4px;
           background: rgba(255, 255, 255, 0.3);
           border-radius: 50%;
-          animation: float 3s ease-in-out infinite;
         }
 
-        .particle:nth-child(odd) {
-          animation-duration: 4s;
-          animation-delay: 1s;
-        }
 
-        .particle:nth-child(even) {
-          animation-duration: 5s;
-          animation-delay: 2s;
-        }
 
         /* Main Card */
         .signin-card {
@@ -322,7 +300,6 @@ const SignIn = () => {
           bottom: 0;
           background: linear-gradient(90deg, transparent, rgba(255,140,0,0.3), transparent);
           background-size: 200% 100%;
-          animation: shimmer 2s infinite;
           pointer-events: none;
         }
 
@@ -448,7 +425,6 @@ const SignIn = () => {
         .form-input.error {
           border-color: #ef4444 !important;
           background: rgba(239, 68, 68, 0.1);
-          animation: shake 0.5s ease-in-out;
         }
 
         .input-icon.error {
@@ -517,9 +493,6 @@ const SignIn = () => {
           transition: transform 0.2s ease;
         }
 
-        .toggle-password:hover .toggle-icon {
-          animation: eyeToggle 0.3s ease;
-        }
 
         /* Submit Button */
         .submit-btn {
@@ -536,7 +509,6 @@ const SignIn = () => {
           position: relative;
           overflow: hidden;
           box-shadow: 0 10px 25px rgba(255, 99, 71, 0.3);
-          animation: glow 2s ease-in-out infinite alternate;
         }
 
         .submit-btn:hover {
@@ -552,7 +524,6 @@ const SignIn = () => {
         .submit-btn.loading {
           background: #6b7280;
           cursor: not-allowed;
-          animation: none;
           transform: none;
         }
 
@@ -570,7 +541,6 @@ const SignIn = () => {
           border: 2px solid rgba(255, 255, 255, 0.3);
           border-top: 2px solid white;
           border-radius: 50%;
-          animation: spin 1s linear infinite;
         }
 
         /* Button Shine Effect */
@@ -696,34 +666,6 @@ const SignIn = () => {
           }
         }
 
-        /* High contrast support */
-        @media (prefers-contrast: high) {
-          .signin-card {
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #ffffff;
-          }
-          
-          .form-input {
-            background: rgba(0, 0, 0, 0.5);
-            border: 2px solid #ffffff;
-          }
-          
-          .submit-btn {
-            background: #ffffff;
-            color: #000000;
-          }
-        }
-
-        /* Reduced motion support */
-        @media (prefers-reduced-motion: reduce) {
-          *,
-          *::before,
-          *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-          }
-        }
       `}</style>
     </div>
   );
