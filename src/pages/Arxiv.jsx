@@ -77,11 +77,10 @@ function OrderDisplay() {
         .filter((order) => order.orderItems.length > 0);
     }
 
-    // Sort orders: READY orders go first
     updatedOrders.sort((a, b) => {
       const aHasReady = a.orderItems.some((item) => item.status === 'READY');
       const bHasReady = b.orderItems.some((item) => item.status === 'READY');
-      if (bHasReady && !aHasReady) return 1; // READY orders first
+      if (bHasReady && !aHasReady) return 1; 
       if (!bHasReady && aHasReady) return -1;
       return 0;
     });

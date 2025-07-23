@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { socket } from './socket';
@@ -19,9 +19,11 @@ import {
 import './KitchenPanel.css';
 
 const audio = new Audio('/synthesize.mp3');
+const NOTIFICATION_INTERVAL = 30000; // 30 seconds for notification sound
 
 function KitchenPanel() {
   const [orders, setOrders] = useState([]);
+  const [orderPositions, setOrderPositions] = useState({});
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItems, setUpdatingItems] = useState(new Set());
@@ -32,6 +34,7 @@ function KitchenPanel() {
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [pendingNotifications, setPendingNotifications] = useState([]);
+  const itemRefs = useRef({}); // Store refs for each order item
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -203,6 +206,15 @@ function KitchenPanel() {
       const res = await axios.get('http://192.168.100.99:3000/order/kitchen');
       const validOrders = res.data.filter((order) => order.id && order.orderItems);
       setOrders(validOrders);
+      setOrderPositions((prev) => {
+        const newPositions = { ...prev };
+        validOrders.forEach((order, index) => {
+          if (!newPositions[order.id]) {
+            newPositions[order.id] = index;
+          }
+        });
+        return newPositions;
+      });
       setLastUpdateTime(new Date());
       setIsOffline(false);
       saveOrdersToCache(validOrders);
@@ -213,6 +225,15 @@ function KitchenPanel() {
       const { orders: cachedOrders, timestamp } = loadCachedOrders();
       if (cachedOrders.length > 0) {
         setOrders(cachedOrders);
+        setOrderPositions((prev) => {
+          const newPositions = { ...prev };
+          cachedOrders.forEach((order, index) => {
+            if (!newPositions[order.id]) {
+              newPositions[order.id] = index;
+            }
+          });
+          return newPositions;
+        });
         setLastUpdateTime(timestamp || new Date());
         console.log('🔄 Using cached orders');
       }
@@ -271,6 +292,15 @@ function KitchenPanel() {
     setPendingNotifications([]);
     savePendingNotifications([]);
     console.log('🗑️ Cleared product cache and notifications');
+    setOrders((prevOrders) =>
+      prevOrders.map((order) => ({
+        ...order,
+        orderItems: order.orderItems.map((item) => ({
+          ...item,
+          cookingStartTime: item.status === 'COOKING' && !item.cookingStartTime ? new Date().toISOString() : item.cookingStartTime,
+        })),
+      }))
+    );
   };
 
   const autoRefresh = async () => {
@@ -300,28 +330,33 @@ function KitchenPanel() {
         }
         await audio.play();
         console.log('🔔 Notification sound played');
+        setPendingNotifications([]);
+        savePendingNotifications([]);
       } catch (error) {
         console.error('❌ Notification audio error:', error.message);
-        setPendingNotifications((prev) => {
-          const updated = [...prev, Date.now()];
-          savePendingNotifications(updated);
-          return updated;
-        });
       }
     }, 1000),
     []
   );
 
-  const processPendingNotifications = async () => {
-    if (pendingNotifications.length === 0) return;
-    console.log('🔊 Processing pending notifications:', pendingNotifications.length);
-    for (let i = 0; i < pendingNotifications.length; i++) {
-      await playNotification();
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-    setPendingNotifications([]);
-    savePendingNotifications([]);
-  };
+  useEffect(() => {
+    const notificationInterval = setInterval(() => {
+      const hasPendingItems = orders.some((order) =>
+        order.orderItems.some(
+          (item) =>
+            item.status === 'PENDING' &&
+            item.product &&
+            (!selectedUsername || (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
+        )
+      );
+      if (hasPendingItems && document.visibilityState === 'visible' && !isOffline && isConnected) {
+        console.log('🔔 Playing periodic notification for pending items');
+        playNotification();
+      }
+    }, NOTIFICATION_INTERVAL);
+
+    return () => clearInterval(notificationInterval);
+  }, [orders, selectedUsername, isOffline, isConnected, playNotification]);
 
   const updateOrderStatusToReady = (orderId) => {
     const order = orders.find((o) => o.id === orderId);
@@ -399,6 +434,15 @@ function KitchenPanel() {
       const { orders: cachedOrders, timestamp } = loadCachedOrders();
       if (cachedOrders.length > 0) {
         setOrders(cachedOrders);
+        setOrderPositions((prev) => {
+          const newPositions = { ...prev };
+          cachedOrders.forEach((order, index) => {
+            if (!newPositions[order.id]) {
+              newPositions[order.id] = index;
+            }
+          });
+          return newPositions;
+        });
         setLastUpdateTime(timestamp || new Date());
         setIsOffline(true);
         setIsLoading(false);
@@ -422,7 +466,6 @@ function KitchenPanel() {
     const handleOnline = () => {
       setIsOffline(false);
       fetchOrders(false);
-      processPendingNotifications();
       console.log('🌐 Back online');
     };
 
@@ -431,6 +474,15 @@ function KitchenPanel() {
       const { orders: cachedOrders, timestamp } = loadCachedOrders();
       if (cachedOrders.length > 0) {
         setOrders(cachedOrders);
+        setOrderPositions((prev) => {
+          const newPositions = { ...prev };
+          cachedOrders.forEach((order, index) => {
+            if (!newPositions[order.id]) {
+              newPositions[order.id] = index;
+            }
+          });
+          return newPositions;
+        });
         setLastUpdateTime(timestamp || new Date());
         console.log('📴 Offline, loaded cached orders');
       }
@@ -438,8 +490,7 @@ function KitchenPanel() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('🔊 App visible, processing notifications');
-        processPendingNotifications();
+        console.log('🔊 App visible, checking notifications');
       }
     };
 
@@ -451,7 +502,6 @@ function KitchenPanel() {
       console.log('🟢 WebSocket connected');
       setIsConnected(true);
       setLastUpdateTime(new Date());
-      processPendingNotifications();
     };
 
     const handleDisconnect = () => {
@@ -479,7 +529,7 @@ function KitchenPanel() {
 
       if (shouldUpdateOrder) updateOrderStatusToReady(newOrder.id);
 
-      if (hasAssignedOrder && document.visibilityState === 'visible') {
+      if (hasAssignedOrder && document.visibilityState === 'visible' && !isOffline && isConnected) {
         console.log('🔔 Playing notification for new order');
         playNotification();
       }
@@ -491,6 +541,10 @@ function KitchenPanel() {
           return prevOrders;
         }
         const updatedOrders = [...prevOrders, newOrder];
+        setOrderPositions((prev) => ({
+          ...prev,
+          [newOrder.id]: updatedOrders.length - 1,
+        }));
         saveOrdersToCache(updatedOrders);
         return updatedOrders;
       });
@@ -510,6 +564,10 @@ function KitchenPanel() {
         const orderExists = prevOrders.some((order) => order.id === updatedOrder.id);
         if (!orderExists) {
           const updatedOrders = [...prevOrders, updatedOrder];
+          setOrderPositions((prev) => ({
+            ...prev,
+            [updatedOrder.id]: updatedOrders.length - 1,
+          }));
           saveOrdersToCache(updatedOrders);
           return updatedOrders;
         }
@@ -524,6 +582,11 @@ function KitchenPanel() {
       setLastUpdateTime(new Date());
       setOrders((prevOrders) => {
         const updatedOrders = prevOrders.filter((order) => order.id !== id);
+        setOrderPositions((prev) => {
+          const newPositions = { ...prev };
+          delete newPositions[id];
+          return newPositions;
+        });
         saveOrdersToCache(updatedOrders);
         return updatedOrders;
       });
@@ -537,13 +600,9 @@ function KitchenPanel() {
 
       if (['PENDING', 'COOKING', 'READY'].includes(updatedItem.status) && updatedItem.product?.id) {
         const { assignedToId, isCompleted } = await fetchProductAssignedToId(updatedItem.product.id, productCache, true);
-        if (assignedToId === currentUserId && isCompleted && updatedItem.status === 'PENDING') {
-          console.log(`🔔 Queuing notification for item ${updatedItem.id} (newly completed)`);
-          setPendingNotifications((prev) => {
-            const updated = [...prev, Date.now()];
-            savePendingNotifications(updated);
-            return updated;
-          });
+        if (assignedToId === currentUserId && updatedItem.status === 'PENDING' && !isCompleted && document.visibilityState === 'visible' && !isOffline && isConnected) {
+          console.log(`🔔 Playing notification for item ${updatedItem.id} (newly assigned)`);
+          playNotification();
         }
       }
 
@@ -555,7 +614,20 @@ function KitchenPanel() {
       setOrders((prevOrders) => {
         const updatedOrders = prevOrders.map((order) => ({
           ...order,
-          orderItems: order.orderItems.map((item) => (item.id === updatedItem.id ? { ...item, ...updatedItem } : item)),
+          orderItems: order.orderItems.map((item) =>
+            item.id === updatedItem.id
+              ? {
+                  ...item,
+                  ...updatedItem,
+                  cookingStartTime:
+                    updatedItem.status === 'COOKING' && !item.cookingStartTime
+                      ? new Date().toISOString()
+                      : updatedItem.status !== 'COOKING'
+                      ? undefined
+                      : item.cookingStartTime,
+                }
+              : item
+          ),
         }));
         saveOrdersToCache(updatedOrders);
         return updatedOrders;
@@ -604,7 +676,7 @@ function KitchenPanel() {
           if (order.id === newItem.orderId) {
             const itemExists = order.orderItems.some((item) => item.id === newItem.id);
             if (!itemExists) {
-              return { ...order, orderItems: [...order.orderItems, newItem] };
+              return { ...order, orderItems: [{ ...newItem, cookingStartTime: undefined }, ...order.orderItems] };
             }
           }
           return order;
@@ -615,7 +687,7 @@ function KitchenPanel() {
 
       if (newItem.orderId) {
         const order = orders.find((o) => o.id === newItem.orderId) || { orderItems: [] };
-        const allItems = [...order.orderItems, newItem];
+        const allItems = [{ ...newItem, cookingStartTime: undefined }, ...order.orderItems];
         const allItemsReadyOrCompleted = await Promise.all(
           allItems.map(async (item) => {
             if (item.status === 'READY') return true;
@@ -634,7 +706,7 @@ function KitchenPanel() {
         }
       }
 
-      if (isAssigned && document.visibilityState === 'visible') {
+      if (isAssigned && document.visibilityState === 'visible' && !isOffline && isConnected) {
         console.log('🔔 Playing notification for new item');
         playNotification();
       }
@@ -685,7 +757,6 @@ function KitchenPanel() {
       console.log('🔄 WebSocket reconnected');
       fetchOrders(false);
       localStorage.removeItem(PRODUCT_CACHE_KEY);
-      processPendingNotifications();
     });
 
     return () => {
@@ -699,8 +770,8 @@ function KitchenPanel() {
       socket.off('orderItemAdded', handleOrderItemAdded);
       socket.off('productUpdated', handleProductUpdated);
       socket.off('reconnect');
-      clearInterval(pollInterval);
       clearInterval(autoRefreshInterval);
+      clearInterval(pollInterval);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -723,6 +794,31 @@ function KitchenPanel() {
         savePendingNotifications([]);
         console.log('🗑️ Cleared pending notifications on READY status');
       }
+      if (status === 'COOKING') {
+        setOrders((prevOrders) =>
+          prevOrders.map((order) => ({
+            ...order,
+            orderItems: order.orderItems.map((item) =>
+              item.id === itemId ? { ...item, cookingStartTime: new Date().toISOString() } : item
+            ),
+          }))
+        );
+      } else if (status === 'PENDING') {
+        setOrders((prevOrders) =>
+          prevOrders.map((order) => ({
+            ...order,
+            orderItems: order.orderItems.map((item) =>
+              item.id === itemId ? { ...item, cookingStartTime: undefined } : item
+            ),
+          }))
+        );
+      }
+      if (itemRefs.current[itemId]) {
+        itemRefs.current[itemId].scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
     } catch (error) {
       console.error('❌ Error updating status:', error.message);
       setUpdatingItems((prev) => {
@@ -737,19 +833,23 @@ function KitchenPanel() {
     const date = new Date(dateString);
     const now = new Date();
     const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-    if (diffInMinutes < 60) return `${diffInMinutes} дақиқа олдин`;
+    if (diffInMinutes < 60) return `${diffInMinutes} Мин олдин`;
     return date.toLocaleTimeString('uz-Cyrl-UZ', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const visibleOrders = orders.filter((order) =>
-    ['PENDING', 'COOKING'].includes(order.status) &&
-    order.orderItems.some(
-      (item) =>
-        ['PENDING', 'COOKING'].includes(item.status) &&
-        item.product &&
-        (!selectedUsername || (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
-    )
-  );
+  const visibleOrders = useMemo(() => {
+    return orders
+      .filter((order) =>
+        ['PENDING', 'COOKING'].includes(order.status) &&
+        order.orderItems.some(
+          (item) =>
+            ['PENDING', 'COOKING'].includes(item.status) &&
+            item.product &&
+            (!selectedUsername || (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
+        )
+      )
+      .map((order, index) => ({ ...order, position: orderPositions[order.id] || index }));
+  }, [orders, orderPositions, selectedUsername]);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
@@ -771,8 +871,6 @@ function KitchenPanel() {
     }
   };
 
-  const currentPage = getCurrentPage();
-
   const getUserDisplay = (user) => {
     if (!user) return { roleText: 'Номаълум', displayName: 'Номаълум' };
     switch (user.role) {
@@ -790,21 +888,21 @@ function KitchenPanel() {
       <header className="kitchen-header">
         <div style={{ display: 'flex', gap: '35px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
-            className={`sidebar-item ${currentPage === 'home' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
+            className={`sidebar-item ${getCurrentPage() === 'home' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
             onClick={() => handleMenuItemClick('home')}
           >
             <Home size={20} className="sidebar-icon" />
             Бош саҳифа
           </button>
           <button
-            className={`sidebar-item ${currentPage === 'archive' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
+            className={`sidebar-item ${getCurrentPage() === 'archive' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
             onClick={() => handleMenuItemClick('archive')}
           >
             <Archive size={20} className="sidebar-icon" />
             Архив
           </button>
           <button
-            className={`sidebar-item ${currentPage === 'maxsulotlar' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
+            className={`sidebar-item ${getCurrentPage() === 'maxsulotlar' ? 'active' : ''} ${isConnected ? 'connected' : 'disconnected'}`}
             onClick={() => handleMenuItemClick('maxsulotlar')}
           >
             <UtensilsCrossed size={20} className="sidebar-icon" />
@@ -876,6 +974,30 @@ function KitchenPanel() {
             {visibleOrders.map((order) => {
               const orderInfo = getOrderType(order);
               const { roleText, displayName } = getUserDisplay(order.user);
+              // Split orderItems into COOKING and PENDING items
+              const cookingItems = order.orderItems
+                .filter(
+                  (item) =>
+                    item.status === 'COOKING' &&
+                    item.product &&
+                    item.product.name &&
+                    (!selectedUsername || (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
+                )
+                .sort((a, b) => {
+                  // Sort COOKING items by cookingStartTime (earliest first)
+                  const timeA = a.cookingStartTime ? new Date(a.cookingStartTime).getTime() : Infinity;
+                  const timeB = b.cookingStartTime ? new Date(b.cookingStartTime).getTime() : Infinity;
+                  return timeA - timeB;
+                });
+              const pendingItems = order.orderItems.filter(
+                (item) =>
+                  item.status === 'PENDING' &&
+                  item.product &&
+                  item.product.name &&
+                  (!selectedUsername || (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
+              );
+              // Concatenate COOKING items followed by PENDING items
+              const sortedItems = [...cookingItems, ...pendingItems];
               return (
                 <div className={`order-card ${orderInfo.type === 'delivery' ? 'delivery-order' : ''}`} key={order.id}>
                   <div className="order-header">
@@ -900,83 +1022,72 @@ function KitchenPanel() {
                     </div>
                   </div>
                   <div className="order-items">
-                    {order.orderItems
-                      .filter(
-                        (item) =>
-                          ['PENDING', 'COOKING'].includes(item.status) &&
-                          item.product &&
-                          item.product.name &&
-                          (!selectedUsername || (item.product.assignedTo && item.product.assignedTo.username === selectedUsername))
-                      )
-                      .map((item) => (
-                        <div key={item.id} className="order-item">
-                          <div className="item-details">
-                            <div className="item-header">
-                              <span className="item-count">
-                                <b>{item.count} дона</b>
-                              </span>
-                              <span>{item.product.name || 'Маҳсулот номи юкланмоқда...'}</span>
-                              <span style={{ fontSize: '20px' }}>{formatTime(item.createdAt)}</span>
-                            </div>
-                            <div className={`item-status status-${item.status.toLowerCase()}`}>
-                              {item.status === 'PENDING' ? (
+                    {sortedItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="order-item"
+                        ref={(el) => (itemRefs.current[item.id] = el)}
+                      >
+                        <div className="item-details">
+                          <div className="item-header">
+                            <span className="item-count">
+                              <b>{item.count} дона</b>
+                            </span>
+                            <span>{item.product.name || 'Маҳсулот номи юкланмоқда...'}</span>
+                            <span style={{ fontSize: '20px' }}>{formatTime(item.createdAt)}</span>
+                          </div>
+                          <div>{item.description || ' '}</div>
+                        </div>
+                        <div className="item-actions">
+                          {item.status === 'PENDING' && (
+                            <button
+                              className="action-btn start-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                updateOrderItemStatus(item.id, 'COOKING');
+                              }}
+                              disabled={updatingItems.has(item.id) || !isConnected || isOffline}
+                              style={{ opacity: updatingItems.has(item.id) || !isConnected || isOffline ? 0.5 : 1 }}
+                            >
+                              {updatingItems.has(item.id) ? (
                                 <>
-                                  <Clock size={14} />
-                                  Кутилмоқда
+                                  <RefreshCw size={16} className="btn-spinner spin" />
+                                  Бошланяпти...
                                 </>
                               ) : (
                                 <>
-                                  <ChefHat size={14} />
-                                  Пиширилмоқда
+                                  <Play size={16} className="btn-icon" />
+                                  Пиширишни бошлаш
                                 </>
                               )}
-                            </div>
-                            <div>{item.description || ' '}</div>
-                          </div>
-                          <div className="item-actions">
-                            {item.status === 'PENDING' && (
-                              <button
-                                className="action-btn start-btn"
-                                onClick={() => updateOrderItemStatus(item.id, 'COOKING')}
-                                disabled={updatingItems.has(item.id) || !isConnected || isOffline}
-                                style={{ opacity: updatingItems.has(item.id) || !isConnected || isOffline ? 0.5 : 1 }}
-                              >
-                                {updatingItems.has(item.id) ? (
-                                  <>
-                                    <RefreshCw size={16} className="btn-spinner spin" />
-                                    Бошланяпти...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Play size={16} className="btn-icon" />
-                                    Пиширишни бошлаш
-                                  </>
-                                )}
-                              </button>
-                            )}
-                            {item.status === 'COOKING' && (
-                              <button
-                                className="action-btn done-btn"
-                                onClick={() => updateOrderItemStatus(item.id, 'READY')}
-                                disabled={updatingItems.has(item.id) || !isConnected || isOffline}
-                                style={{ opacity: updatingItems.has(item.id) || !isConnected || isOffline ? 0.5 : 1 }}
-                              >
-                                {updatingItems.has(item.id) ? (
-                                  <>
-                                    <RefreshCw size={16} className="btn-spinner spin" />
-                                    Тугалланмоқда...
-                                  </>
-                                ) : (
-                                  <>
-                                    <CheckCircle size={16} className="btn-icon" />
-                                    Тайёр деб белгиллаш
-                                  </>
-                                )}
-                              </button>
-                            )}
-                          </div>
+                            </button>
+                          )}
+                          {item.status === 'COOKING' && (
+                            <button
+                              className="action-btn done-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                updateOrderItemStatus(item.id, 'READY');
+                              }}
+                              disabled={updatingItems.has(item.id) || !isConnected || isOffline}
+                              style={{ opacity: updatingItems.has(item.id) || !isConnected || isOffline ? 0.5 : 1 }}
+                            >
+                              {updatingItems.has(item.id) ? (
+                                <>
+                                  <RefreshCw size={16} className="btn-spinner spin" />
+                                  Тугалланмоқда...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle size={16} className="btn-icon" />
+                                  Тайёр деб белгиллаш
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
-                      ))}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
